@@ -9,12 +9,6 @@
     * [1 - Installation et configuration](administration-systeme/active-directory/decouverte-et-mise-en-place/1-installation-et-configuration.md)
     * [2 - Test des permissions et GPO](administration-systeme/active-directory/decouverte-et-mise-en-place/2-test-des-permissions-et-gpo.md)
     * [3 - Hardening du serveur](administration-systeme/active-directory/decouverte-et-mise-en-place/3-hardening-du-serveur.md)
-* [⚙️ Ansible](administration-systeme/ansible/README.md)
-  * [Config VBOX + KVM](<administration-systeme/Ansible/CONFIG VBOX + KVM.md>)
-  * [Day 1 - Mise en place de l'environnement](<administration-systeme/Ansible/Day 1 - Mise en place de l'environnement.md>)
-  * [Day 2 - Maintenance + easy](<administration-systeme/Ansible/Day 2 - Maintenance + easy.md>)
-  * [Day 3 - éliminer la peur de déploiement](<administration-systeme/Ansible/Day 3 - éliminer la peur de déploiement.md>)
-  * [Day 4 - éliminer la peur du déploiement v2](<administration-systeme/Ansible/Day 4 - éliminer la peur du déploiement v2.md>)
 
 ## 🧑‍🎓 Cours & TP M1 Cyber
 

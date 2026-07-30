@@ -1,44 +1,50 @@
+# 1 - Mise en place de l'environnement
 
----
+***
 
-# Pourquoi Ansible ?
+## Pourquoi Ansible ?
 
-![[Pasted image 20260729165633.png|283]]
+![](<../../../.gitbook/assets/image (10).png>)
 
 Ansible est un outil d'automatisation permettant de gérer un grand nombre de serveurs sans devoir intervenir manuellement sur chacun d'eux.
 
 Il permet notamment :
 
-- d'automatiser la configuration des serveurs ;
-- de standardiser les installations ;
-- déployer des applications ;
-- d'exécuter des tâches d'administration sur plusieurs machines simultanément.
+* d'automatiser la configuration des serveurs ;
+* de standardiser les installations ;
+* déployer des applications ;
+* d'exécuter des tâches d'administration sur plusieurs machines simultanément.
 
 En effet, lorsque le nombre de serveurs augmente, les interventions manuelles deviennent longues. Certains serveurs deviennent des **Flocons de neiges** (machines uniques et fragiles), suscitant de l’appréhension pour les déploiements. Dans plusieurs infras, on assiste donc à l'apparition de plusieurs scripts d'automatisation, difficiles à maintenir.
 
 L'objectif est donc de rendre les déploiements reproductibles, fiables et automatisés.
 
 La formation sera organisée en trois grandes parties :
-## 1. Maintenance
+
+### 1. Maintenance
 
 Comment réaliser rapidement des actions de maintenance sur plusieurs machines, par exemple pour :
-- récupérer une version d'application ;
-- lancer une commande sur plusieurs serveurs.
+
+* récupérer une version d'application ;
+* lancer une commande sur plusieurs serveurs.
 
 > Cette pratique reste exceptionnelle : les actions de masse doivent idéalement être automatisées via des playbooks.
-## 2. Installation des serveurs
+
+### 2. Installation des serveurs
 
 Cette partie se concentre sur la création de playbooks et de rôles Ansible afin de standardiser et automatiser l’installation des serveurs.
-## 3. Déploiement applicatif
+
+### 3. Déploiement applicatif
 
 Cette dernière partie traite du déploiement applicatif sur une infrastructure déjà en place, avec pour objectif :
 
-- déployer automatiquement une nouvelle version ;
-- réduire les risques humains ;
-- fiabiliser les mises en production.
+* déployer automatiquement une nouvelle version ;
+* réduire les risques humains ;
+* fiabiliser les mises en production.
 
----
-# Mise en place du lab locale
+***
+
+## Mise en place du lab locale
 
 On va passer par Multipass pour monter des VM légères rapidement et facilement. Il s'agit d'un un gestionnaire léger de machines virtuelles developéés par Canonical. Il permet la création très rapide de VM, avec faible consommation de ressources sans GUI, disponible sous Windows, Linux et macOS.
 
@@ -100,7 +106,7 @@ Pour maintenir le fichier hosts à jour, une crontab de la sorte permettra au sc
 
 Quand on affiche la liste des VM avec la commande suivante :
 
-```text
+```
 $ multipass list
 
 Name              State     IPv4
@@ -111,16 +117,17 @@ web-server-2      Running   10.3.241.176
 
 Le fichier `/etc/hosts` devient :
 
-```text
+```
 # BEGIN MULTIPASS
 10.3.241.179 ansible-main
 10.3.241.212 web-server-1
 10.3.241.176 web-server-2
 # END MULTIPASS
 ```
-# Préparation des VM pour Ansible
 
-Les VM doivent autoriser la connexion SSH, l'authentification par mot de passe et la connexion du compte root. A éviter bien sûr en prod mais là on est dans un lab locale donc ça va :) 
+## Préparation des VM pour Ansible
+
+Les VM doivent autoriser la connexion SSH, l'authentification par mot de passe et la connexion du compte root. A éviter bien sûr en prod mais là on est dans un lab locale donc ça va :)
 
 ```bash
 multipass exec web-server-1 -- sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
@@ -165,7 +172,7 @@ rm "$TMP_FILE"
 
 **Note : Ce script ne stabilise pas les IP. Il ne fait que maintenir la résolution des hostnames.**
 
-Puis on se créé un fichier d'inventaire "**inventory.ini**". Bien sûr pas de mot de passe en dur en prod :D : 
+Puis on se créé un fichier d'inventaire "**inventory.ini**". Bien sûr pas de mot de passe en dur en prod :D :
 
 ```ini
 [web]
@@ -187,7 +194,8 @@ Puis sur la VM "**ansible-main**" on installe python3-pip + ansible + ajout dans
 ```bash
 export PATH=$PATH:~/.local/bin
 ```
-# Première erreur rencontrée
+
+## Première erreur rencontrée
 
 Quand on veut ping les hôtes :
 
@@ -197,7 +205,7 @@ ansible -m ping -i inventory all
 
 Une erreur indique que le paquet `sshpass` est obligatoire dans ce cas.
 
-```text
+```
 FAILED!
 
 to use the 'ssh' connection type with passwords
@@ -211,7 +219,8 @@ sudo apt update
 
 sudo apt install -y sshpass
 ```
-# Vérification du fonctionnement
+
+## Vérification du fonctionnement
 
 Commande :
 
@@ -221,14 +230,14 @@ ansible -m ping -i hosts.ini all
 
 Résultat attendu :
 
-```text
+```
 web-server-1 | SUCCESS
 web-server-2 | SUCCESS
 ```
 
 Sortie :
 
-```text
+```
 {
     "changed": false,
     "ping": "pong"

@@ -29,7 +29,7 @@ On va donc régler tout ça ;)
 
 ### Désactiver NTLM :
 
-NTLM n'a plus besoin d'être présenté comme ayant besoin d'être désactivé, il est obsolète et facilement utilisable dans les attaques NTLM Relay. On peut désactiver l'authentification NTLM via la GPO suivante :&#x20;
+NTLM n'a plus besoin d'être présenté comme ayant besoin d'être désactivé, il est obsolète et facilement utilisable dans les attaques NTLM Relay. On peut désactiver l'authentification NTLM via la GPO suivante :
 
 <figure><img src="../../../.gitbook/assets/image (118).png" alt=""><figcaption></figcaption></figure>
 
@@ -51,7 +51,7 @@ C'est déjà mieux ! Mais continuons.
 
 <figure><img src="../../../.gitbook/assets/image (122).png" alt=""><figcaption></figcaption></figure>
 
-Cela permet d'éviter qu'un service compromis vole le TGT Kerberos de l'Admin. Le stale object en question a diminué ainsi :&#x20;
+Cela permet d'éviter qu'un service compromis vole le TGT Kerberos de l'Admin. Le stale object en question a diminué ainsi :
 
 <figure><img src="../../../.gitbook/assets/image (123).png" alt=""><figcaption></figcaption></figure>
 
@@ -86,7 +86,7 @@ Enable-ADOptionalFeature -Identity 'Recycle Bin Feature' -Scope ForestOrConfigur
 
 Cela permet de **récupérer n'importe quel objet supprimé** pendant 180 jours au lieu de le perdre définitivement.
 
-Priv Accounts sur le rapport tombe désormais à 0 :&#x20;
+Priv Accounts sur le rapport tombe désormais à 0 :
 
 <figure><img src="../../../.gitbook/assets/image (125).png" alt=""><figcaption></figcaption></figure>
 
@@ -223,43 +223,10 @@ Avec ces deux règles Stale Objects est passé de 31 à **11/100** (S-OldNtlm co
 
 PingCastle continue à flagger ça :
 
-<figure><img src="../../../.gitbook/assets/image (139).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (138).png" alt=""><figcaption></figcaption></figure>
 
 Mais normal car **Runscripthelper.exe** était présent uniquement sur **Windows 10 build 16299**. L'AD tourne sur **Windows Server 2019**, où ce binaire n'existe tout simplement plus — Microsoft l'a retiré dans les versions suivantes.
 
 Il reste encore beaucoup à faire pour arriver à un score à 0 (moins probable en production). Ce qui fait que le score reste très élevé est dû au fait que l'AD ne dispose pas d'un backup, ce qui est normale car l'AD est en locale sur mon PC.
 
 Tout les autres points sont des **"informative rules" (0 point)** - typiques labo solo.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

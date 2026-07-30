@@ -12,7 +12,10 @@
 
 * [🔍 Ansible](administration-systeme/ansible/README.md)
   * [💻 Découverte et mise en place](administration-systeme/ansible/decouverte-et-mise-en-place/README.md)
-
+    * [1 - Mise en place de l'environnement](administration-systeme/ansible/decouverte-et-mise-en-place/1 - Mise en place de l'environnement.md)
+    * [2 - Gestion de parc, modules, playbooks & rôles](administration-systeme/ansible/decouverte-et-mise-en-place/2 - Gestion de parc, modules, playbooks & rôles.md)
+    * [3 - Éliminer la peur de déploiement](administration-systeme/ansible/decouverte-et-mise-en-place/3 - Éliminer la peur de déploiement.md)
+    * [4 - Déploiement sans interruption](administration-systeme/ansible/decouverte-et-mise-en-place/4 - Déploiement sans interruption.md)
 
 ## 🧑‍🎓 Cours & TP M1 Cyber
 

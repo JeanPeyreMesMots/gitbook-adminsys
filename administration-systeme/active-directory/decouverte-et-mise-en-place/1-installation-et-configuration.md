@@ -18,7 +18,7 @@ Une fois l'install des VMWare Tools, du fullscreen ok... on a maintenant notre W
 
 <figure><img src="../../../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
 
-Renommage du serveur en "**mesmots**", avec description "Serveur AD MesMots" :&#x20;
+Renommage du serveur en "**mesmots**", avec description "Serveur AD MesMots" :
 
 <figure><img src="../../../.gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
 
@@ -54,7 +54,7 @@ mesmots.local
     └── OU Ordinateurs
 ```
 
-De ce fait on se retrouve avec l'arborescence complète suivante. Avec chaque utilisateur appartenant à un groupe au format "GRP\_CODIR", "GRP\_ADMIN"... suivant le nom de l'OU :&#x20;
+De ce fait on se retrouve avec l'arborescence complète suivante. Avec chaque utilisateur appartenant à un groupe au format "GRP\_CODIR", "GRP\_ADMIN"... suivant le nom de l'OU :
 
 ```rust
 mesmots.local
@@ -116,7 +116,7 @@ Une fois le disque créé on ouvre "**diskmgmt.msc"** sur l'AD, puis on peut le 
 
 <figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-Le disque est ensuite monté en D:/. On y créé dessus un dossier nommé "**Partages**" et on peut ensuite y créer les dossiers avec leurs arborescences correspondant aux OU. En témoigne le listing du répertoire dessus :&#x20;
+Le disque est ensuite monté en D:/. On y créé dessus un dossier nommé "**Partages**" et on peut ensuite y créer les dossiers avec leurs arborescences correspondant aux OU. En témoigne le listing du répertoire dessus :
 
 ```powershell
 PS C:\Users\Administrateur> cd D:\Partages
@@ -201,7 +201,7 @@ Le TP donnait un tableau des permissions à appliquer sur le partage, en fonctio
 
 <figure><img src="../../../.gitbook/assets/image (78).png" alt=""><figcaption></figcaption></figure>
 
-Ainsi que pour les autres groupes :&#x20;
+Ainsi que pour les autres groupes :
 
 <figure><img src="../../../.gitbook/assets/image (79).png" alt=""><figcaption></figcaption></figure>
 
@@ -213,11 +213,11 @@ Dans un premier temps, je créé un groupe global "**GG\_GRP\_ALL\_USERS**" qui 
 
 <figure><img src="../../../.gitbook/assets/image (81).png" alt=""><figcaption></figcaption></figure>
 
-Puis on donne accès en lecture à ce groupe sur le dossier "**D:/Partages**" créé plus tôt. Cela nous permet d'avoir un accès SMB effectif, qui sera ensuite affiné avec les permissions NTFS :&#x20;
+Puis on donne accès en lecture à ce groupe sur le dossier "**D:/Partages**" créé plus tôt. Cela nous permet d'avoir un accès SMB effectif, qui sera ensuite affiné avec les permissions NTFS :
 
 <figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-Les permissions NTFS sont définissables via un clique droit sur un sous dossier du partage "D:/Partages". Par exemple, pour définir la bonne permission sur le sous-dossier "COMMUN", on fait clique droit > Propriétés > Avancés en bas à droite :&#x20;
+Les permissions NTFS sont définissables via un clique droit sur un sous dossier du partage "D:/Partages". Par exemple, pour définir la bonne permission sur le sous-dossier "COMMUN", on fait clique droit > Propriétés > Avancés en bas à droite :
 
 <figure><img src="../../../.gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
 
@@ -227,7 +227,7 @@ Puis on peut y appliquer les permissions NTFS en ajoutant chaque groupe voulu, p
 
 <figure><img src="../../../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
-On met donc proprement chaque permissions nécessaires à chaque groupe pour chaque dossiers. Ce qui donne le listing Powershell suivant des permissions de chaque dossiers ;) :&#x20;
+On met donc proprement chaque permissions nécessaires à chaque groupe pour chaque dossiers. Ce qui donne le listing Powershell suivant des permissions de chaque dossiers ;) :
 
 ```ps1
 # Dossier : ADMINISTRATIF
@@ -268,21 +268,21 @@ GG_GRP_PROFS           Modify
 
 Chaque groupe possède alors granulairement les permissions qu'il lui fait pour accéder à chaque dossier. On s'assure donc de bien respecter les accès tels qu'ils sont définis dans le tableau des permissions.
 
-### Configuration de la VM Windows 11 cliente et du réseau&#x20;
+### Configuration de la VM Windows 11 cliente et du réseau
 
 Maintenant que le serveur et que le partage sont en place, on peut créer une VM Windows 11 qui sera dans le même réseau local, pour simuler un poste client.
 
 _Note : Pour permettre la jonction avec l'AD il est essentiel de choisir la version "Pro"._
 
-Une fois la VM installée, procède à un debloating de Windows via [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) pour libérer de la ressource sur ma machine et avoir un système plus léger :&#x20;
+Une fois la VM installée, procède à un debloating de Windows via [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) pour libérer de la ressource sur ma machine et avoir un système plus léger :
 
 <figure><img src="../../../.gitbook/assets/image (82).png" alt=""><figcaption></figcaption></figure>
 
-On définit ensuite l'adresse de l'AD en tant que serveur DNS, **192.186.1.100**, nécessaire afin de pouvoir bien communiquer ce dernier :&#x20;
+On définit ensuite l'adresse de l'AD en tant que serveur DNS, **192.186.1.100**, nécessaire afin de pouvoir bien communiquer ce dernier :
 
 <figure><img src="../../../.gitbook/assets/image (98).png" alt=""><figcaption></figcaption></figure>
 
-On configure ensuite un réseau virtuel _**vmnet1**_ sous VMware afin d'établir une connexion pontée entre l'Active Directory et une VM Windows 11, avec une plage DHCP définie de **192.168.1.100 à 192.168.1.254** :&#x20;
+On configure ensuite un réseau virtuel _**vmnet1**_ sous VMware afin d'établir une connexion pontée entre l'Active Directory et une VM Windows 11, avec une plage DHCP définie de **192.168.1.100 à 192.168.1.254** :
 
 <figure><img src="../../../.gitbook/assets/image (83).png" alt=""><figcaption></figcaption></figure>
 
@@ -292,17 +292,17 @@ Puis on installe le serveur DHCP, en nous aidant de ce guide :
 
 On remarque ensuite que 2 users sont créés dans le groupe :
 
-<figure><img src="../../../.gitbook/assets/image (89).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (88).png" alt=""><figcaption></figcaption></figure>
 
 On créé ensuite un pool DHCP. Dans cet exemple, l'AD a l'adresse IP "**192.168.1.100**" également configuré en statique dessus. Nous allons créer une étendue pour distribuer les adresses IP de **192.168.1.100** à **124**, soit 24 adresses IPv4. Soit le nombres d'employés de la boite fictive !
 
 On lui donne un nom, pour le coup "**LAN\_MesMots**" :
 
-<figure><img src="../../../.gitbook/assets/image (93).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (90).png" alt=""><figcaption></figcaption></figure>
 
 On met ensuite le bail DHCP de l'AD à 8 jours, réaliste pour un réseau entreprise :
 
-<figure><img src="../../../.gitbook/assets/image (94).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (92).png" alt=""><figcaption></figcaption></figure>
 
 On remarques que l'opération a bien réussi en jetant un oeil aux logs sur le serveur : "**C:\Windows\System32\dhcp**"
 
@@ -349,7 +349,7 @@ Réponse de 192.168.1.100 : octets=32 temps<1ms TTL=128
 Paquets : envoyés=4, reçus=4, perdus=0 (perte 0%)
 ```
 
-Puis le DNS inverse :&#x20;
+Puis le DNS inverse :
 
 ```powershell
 PS C:\> nslookup 192.168.1.100
@@ -360,7 +360,7 @@ Serveur : UnKnown
 Address: 192.168.1.100
 ```
 
-Et l'authentification AD :&#x20;
+Et l'authentification AD :
 
 ```powershell
 PS C:\> nltest /dsgetdc:mesmots.local
@@ -374,4 +374,4 @@ Indicateurs : PDC GC DS LDAP KDC TIMESERV ...
 La commande a été correctement exécutée.
 ```
 
-Notre DC est donc bien détecté et joignable ! ✅&#x20;
+Notre DC est donc bien détecté et joignable ! ✅

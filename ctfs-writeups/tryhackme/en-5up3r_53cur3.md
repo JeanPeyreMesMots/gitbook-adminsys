@@ -109,7 +109,7 @@ Interesting stuffs here, we have services running on common ports
 * SSH (22) on **OpenSSH 8.2p1 Ubuntu 4ubuntu0.5** along with the public keys of the server
 * HTTP Server (80, 8080) on **Apache 2.4.41**
 
-We can see that nmap found a file called "file.txt" on the server. This has been possible by trying to connect to it using Anonymous. Assuming that the FTP server accept Anonymous connection, let's try to get the file on it ! :&#x20;
+We can see that nmap found a file called "file.txt" on the server. This has been possible by trying to connect to it using Anonymous. Assuming that the FTP server accept Anonymous connection, let's try to get the file on it ! :
 
 ```
 # ftp Anonymous@10.10.113.169
@@ -139,9 +139,9 @@ Naaaah ! Not that fast !
 
 ```
 
-....Would have been to easy. Let's try to go on the web page despite it :D :&#x20;
+....Would have been to easy. Let's try to go on the web page despite it :D :
 
-<figure><img src="../../.gitbook/assets/image (44).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (38).png" alt=""><figcaption></figcaption></figure>
 
 ```
 search
@@ -471,11 +471,11 @@ Disallow: /NXVwM3JfYzRjaDM=
 
 When we see it, it obviously looks like a base64 string. If we aren't sure, we can still pass it to [CyberChef](https://gchq.github.io/CyberChef/) , the swiss army knife for encoded strings, URIs, zip... Absolute needed for CTFs. We can use the "magic" option to optain instant recognition of the string got if we still aren't sure of what type of string it is. Let's try the first one :
 
-<figure><img src="../../.gitbook/assets/image (68).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (50).png" alt=""><figcaption></figcaption></figure>
 
-That's some good trolling. And what about the second ? :&#x20;
+That's some good trolling. And what about the second ? :
 
-<figure><img src="../../.gitbook/assets/image (47).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (39).png" alt=""><figcaption></figcaption></figure>
 
 Here we got it ! Another subdirectory called **5up3r\_c4ch3**, let's paste it and search for it !<br>
 
@@ -483,15 +483,15 @@ Here we got it ! Another subdirectory called **5up3r\_c4ch3**, let's paste it an
 
 Uh, nice... White page. Let's be serious for a minute, if we look into the source code :
 
-<figure><img src="../../.gitbook/assets/image (61).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (26).png" alt=""><figcaption></figcaption></figure>
 
 We're on a good path ;) Let's feed this to cyberchef one more time :
 
-<figure><img src="../../.gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (18).png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../../.gitbook/assets/image (24).png" alt=""><figcaption></figcaption></figure>
 
-### 2 - Getting an access :&#x20;
+### 2 - Getting an access :
 
 ```
 jeannoobie@sup3r-s3cur3:~$ history 
@@ -550,7 +550,7 @@ And we got the flag, hidden here but it start with the **"n"** character ;)
 
 <figure><img src="../../.gitbook/assets/image (30).png" alt=""><figcaption></figcaption></figure>
 
-### 3 - Becoming r00t :&#x20;
+### 3 - Becoming r00t :
 
 Now that we have our first user flag, we may want to acquire the super-root powers, right ? Let's start it by checking the other interesting file, **"RouteToRoot.txt"** :
 
@@ -566,15 +566,15 @@ jeannoobie@sup3r-s3cur3:~$
 
 "Search for the GET requests and you will find the flag, young Padawan"
 
-<figure><img src="../../.gitbook/assets/image (53).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (19).png" alt=""><figcaption></figcaption></figure>
 
 "GET Requests", sounds like some networking stuffs for us right ?
 
-Maybe we can take a look at the requests on the web server, using our favorite network-sword **Wireshark** : <br>
+Maybe we can take a look at the requests on the web server, using our favorite network-sword **Wireshark** :<br>
 
-<figure><img src="../../.gitbook/assets/image (56).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (55).png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../.gitbook/assets/image (64).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (51).png" alt=""><figcaption></figcaption></figure>
 
 Nothing on the page where we found the SSH creditentials. Maybe in the robots.txt page ?
 
@@ -582,9 +582,9 @@ Nothing on the page where we found the SSH creditentials. Maybe in the robots.tx
 
 <figure><img src="../../.gitbook/assets/image (32).png" alt=""><figcaption></figcaption></figure>
 
-There is still the Apache default web page :&#x20;
+There is still the Apache default web page :
 
-<figure><img src="../../.gitbook/assets/image (43).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
 
 ```
 jeannoobie@sup3r-s3cur3:/var/log/apache2$ cat error.log
@@ -639,7 +639,7 @@ But, trying these path on the web page doesn't work, we're still stuck :/
 
 <figure><img src="../../.gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../.gitbook/assets/image (66).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (23).png" alt=""><figcaption></figcaption></figure>
 
 No base64 or encoded string in the file. Maybe if we take a look at the **other\_vhosts\_access.log** file ?
 
@@ -684,11 +684,11 @@ n***{*********************}
 root@sup3r-s3cur3:~#
 ```
 
-<figure><img src="../../.gitbook/assets/image (48).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (45).png" alt=""><figcaption></figcaption></figure>
 
 ### Conclusion :
 
-That was an easy and funny box to complete, thanks to @Noobosaurus\_r3x for making and publishing it on THM ;) You can joing his Discord server, it's a real gold-mine (only in French of course :D) :&#x20;
+That was an easy and funny box to complete, thanks to @Noobosaurus\_r3x for making and publishing it on THM ;) You can joing his Discord server, it's a real gold-mine (only in French of course :D) :
 
 [https://discord.gg/BXakAbF5<br>](https://discord.gg/BXakAbF5)\
 Thank you for reading, and have a nice day !

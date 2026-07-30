@@ -10,8 +10,8 @@
     * [2 - Test des permissions et GPO](administration-systeme/active-directory/decouverte-et-mise-en-place/2-test-des-permissions-et-gpo.md)
     * [3 - Hardening du serveur](administration-systeme/active-directory/decouverte-et-mise-en-place/3-hardening-du-serveur.md)
 
-* [🔍 Ansible](administration-systeme/active-directory/README.md)
-  * [💻 Découverte et mise en place](administration-systeme/active-directory/decouverte-et-mise-en-place/README.md)
+* [🔍 Ansible](administration-systeme/ansible/README.md)
+  * [💻 Découverte et mise en place](administration-systeme/ansible/decouverte-et-mise-en-place/README.md)
 
 
 ## 🧑‍🎓 Cours & TP M1 Cyber

@@ -29,21 +29,21 @@ Pour valider un certificat SSL généré via ACM par la méthode DNS, un enregis
 
 Une première tentative de génération de certificat SSL est effectuée pour le domaine `da-grind.fr` :
 
-![](assets/Pasted image 20260531150855.png)
+![](assets/Pasted_image_20260531150855.png)
 
 > La validation par email est à éviter au profit de la validation par DNS.
 
 Une fois la demande initiée, l'enregistrement correspondant doit être créé côté route/S3 pour prouver la propriété du domaine :
 
-![](assets/Pasted image 20260531151052.png)
+![](assets/Pasted_image_20260531151052.png)
 
 La validation reste cependant bloquée : les enregistrements DNS apparaissent grisés, et la route ne peut pas être créée tant qu'un enregistrement DNS n'a pas été créé dans Route 53 :
 
-![](assets/Pasted image 20260531151841.png)
+![](assets/Pasted_image_20260531151841.png)
 
 Une **Hosted Zone** Route 53 pour `da-grind.fr` crée automatiquement les enregistrements NS et SOA mentionnés plus haut. L'enregistrement de validation DNS pour le certificat ACM est ensuite créé à son tour :
 
-![](assets/Pasted image 20260531151732.png)
+![](assets/Pasted_image_20260531151732.png)
 
 Trois enregistrements DNS sont désormais présents dans Route 53 :
 
@@ -57,7 +57,7 @@ Trois enregistrements DNS sont désormais présents dans Route 53 :
 
 En suivant la formation, le formateur (cocadmin) utilisait un nom de domaine personnel, ce qui a conduit à une erreur : une tentative de génération de certificat a été faite pour un domaine qui n'était en réalité pas enregistré. Le domaine `da-grind.fr` a donc été acheté chez OVH pour corriger ce point :
 
-![](assets/Pasted image 20260601184149.png)
+![](assets/Pasted_image_20260601184149.png)
 
 Coût : environ 4 €/mois, engagement d'un an.
 
@@ -89,7 +89,7 @@ www.da-grind.fr.	3561	IN	A	51.91.236.255
 
 Le site affiche pour l'instant une page "en construction", fournie par défaut par OVH :
 
-![](assets/Pasted image 20260601185254.png)
+![](assets/Pasted_image_20260601185254.png)
 
 ### 3. Connexion à AWS en CLI
 
@@ -183,6 +183,6 @@ Address: 2600:9000:5306:2c00::1
 
 Ces quatre serveurs de noms sont ensuite renseignés côté interface OVH, à la place des serveurs de noms par défaut d'OVH, afin de déléguer la gestion DNS du domaine à Route 53 :
 
-![](assets/Pasted image 20260602174428.png)
+![](assets/Pasted_image_20260602174428.png)
 
 > À compléter : vérification finale de la propagation

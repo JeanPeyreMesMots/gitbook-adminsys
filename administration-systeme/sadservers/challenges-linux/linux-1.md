@@ -1,9 +1,5 @@
 ﻿# SadServers – Linux Challenges
 
-Solutions à des challenges de troubleshooting Linux sur la plateforme [SadServers](https://sadservers.com/) — accès SSH à une VM avec un problème réel à résoudre : permissions, services cassés, scripts, etc.
-
----
-
 ## Apia
 **Objectif :** un mot a été ajouté dans un fichier parmi une centaine, il faut le retrouver et fournir la solution sous forme de hash MD5.
 

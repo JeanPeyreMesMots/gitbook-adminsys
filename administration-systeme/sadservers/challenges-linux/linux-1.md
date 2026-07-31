@@ -5,7 +5,6 @@ Solutions à des challenges de troubleshooting Linux sur la plateforme [SadServe
 ---
 
 ## <mark>Apia</mark>
-
 **Objectif :** un mot a été ajouté dans un fichier parmi une centaine, il faut le retrouver et fournir la solution sous forme de hash MD5.
 
 On commence par lister tous les fichiers :
@@ -58,7 +57,6 @@ C'est bien le cas.
 ---
 
 ## <mark>Tokamachi</mark>
-
 **Objectif :** un writer doit envoyer des messages en continu dans un named pipe (`/home/admin/namedpipe`), un reader doit les capturer avec timestamp dans `/home/admin/reader.log`.
 
 Le reader tourne déjà, avec un délai de 2 secondes entre chaque lecture :
@@ -125,7 +123,6 @@ nohup /bin/bash -c 'while true; do echo "this is a test message being sent to th
 ---
 
 ## <mark>Yokohama</mark>
-
 **Objectif :** gestion de permissions pour 4 users (abe, betty, carlos, debora) :
 
 - chacun modifie son propre fichier ;
@@ -232,7 +229,6 @@ Done.
 ---
 
 ## <mark>Fukuoka</mark>
-
 **Objectif :** un serveur nginx renvoie une 404 par défaut au lieu de servir un fichier avec le message _"Welcome to the Real Site!"_.
 
 ```bash

@@ -1,5 +1,4 @@
-﻿## ==Paris==
-
+﻿## <mark>Paris</mark>
 Un peu de hacking, comme au bon vieux temps :D
 
 ### Reconnaissance
@@ -65,8 +64,7 @@ echo "FDZPmh5AX3oiJt" > ~/mysolution
 Confirmé :) :
 
 ![[Pasted image 20260731221201.png|390]]
-## ==Manado==
-
+## <mark>Manado</mark>
 _(Note prise rapidement, à détailler plus tard)_
 
 Exercice autour de la commande `sort` et de la compression `xz` :
@@ -107,8 +105,7 @@ ll
 cp names_COPY.xz solution/
 ```
 
-## ==Moyogalpa==
-
+## <mark>Moyogalpa</mark>
 **Contexte (via `/home/README.txt`) :** une application Golang sécurisée par John et Mike, cassée par leurs propres mesures de sécurité. Contraintes à respecter :
 
 - communication uniquement en HTTPS ;

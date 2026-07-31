@@ -1,5 +1,4 @@
-﻿## ==Budapest==
-
+﻿## <mark>Budapest</mark>
 **Objectif :** créer un compte pour chaque utilisateur listé dans `user_list.txt` (format `user;password`), avec le mot de passe correspondant.
 
 ```bash
@@ -29,8 +28,7 @@ while IFS=';' read -r user pass; do
 done < "$INPUT"
 ```
 
-## ==Tukaani==
-
+## <mark>Tukaani</mark>
 **Contexte :** un service (`jobapp`) charge une version malveillante d'une librairie système (`liblzma.so.5`) via une variable d'environnement, à la place de la vraie librairie.
 
 ### Comprendre le mécanisme
@@ -113,8 +111,7 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.5 /opt/.trash/liblzma.so.5
 ```
 
 Ainsi, même si un service référence encore ce chemin, il pointe désormais vers la librairie légitime.
-## ==Tokelau==
-
+## <mark>Tokelau</mark>
 **Problème :** vider des entrées spécifiques de l'historique bash (contenant "foo") sans que la session courante ne les fasse réapparaître.
 
 Point clé compris après coup : `history -r` ne **remplace pas** l'historique de la session en cours, il **ajoute** le contenu du fichier à la liste déjà chargée en mémoire. Du coup, supprimer une ligne du fichier `.bash_history` avec `sed` ne suffit pas si l'historique en mémoire de la session contient encore les commandes visées.
@@ -128,8 +125,7 @@ sed -i '/foo/d' ~/.bash_history && history -c && history -r
 - `sed -i '/foo/d' ~/.bash_history` : supprime les lignes contenant "foo" du fichier.
 - `history -c` : vide l'historique de la session courante (en mémoire).
 - `history -r` : recharge l'historique depuis le fichier (désormais propre).
-## ==Hanoi==
-
+## <mark>Hanoi</mark>
 **Objectif :** croiser deux fichiers — `users.txt` (liste d'utilisateurs) et `groups.txt` (format `group_name:user1,user2,user3`) — pour lister les utilisateurs appartenant à plus d'un groupe, triés alphabétiquement.
 
 Prompt envoyé à Perplexity pour générer le script :
@@ -165,8 +161,7 @@ done | sort > /home/admin/multi-group-users.txt
 ```
 
 Fonctionne du premier coup.
-## ==Kampala==
-
+## <mark>Kampala</mark>
 **Contexte :** des scripts de déploiement qui refusent de s'exécuter, sans erreur de permission ni de syntaxe visible au premier abord.
 
 ### Premiers checks, rien d'anormal

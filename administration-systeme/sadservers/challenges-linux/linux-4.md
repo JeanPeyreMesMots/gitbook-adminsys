@@ -1,5 +1,4 @@
-﻿## ==Oaxaca==
-
+﻿## <mark>Oaxaca</mark>
 **Objectif :** fermer un fichier ouvert par un process, sans tuer ce process.
 
 Direction Google direct : _"close a file without killing its process"_, qui mène à [ce thread superuser](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
@@ -40,8 +39,7 @@ lsof -p 1037
 ```
 
 Descripteur fermé, process bash toujours vivant. Plus simple que prévu au final.
-## ==Melbourne==
-
+## <mark>Melbourne</mark>
 **Contexte :** une appli Python WSGI (`/home/admin/wsgi.py`) censée servir "Hello, world!", derrière Gunicorn, lui-même derrière nginx. Chaîne attendue : `curl → nginx → Gunicorn → wsgi.py`. Objectif : que `curl localhost` renvoie bien "Hello, world!".
 
 ### Étape 1 : nginx éteint
@@ -157,8 +155,7 @@ curl http://localhost
 ```
 
 Résolu : 4 couches de la stack (nginx down, Gunicorn down, mauvais nom de socket, bug applicatif) à débloquer une par une.
-## ==Lisbon==
-
+## <mark>Lisbon</mark>
 **Contexte :** serveur etcd avec, en apparence, un problème de certificat SSL.
 
 ```bash

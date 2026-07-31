@@ -1,5 +1,4 @@
-﻿## ==Kortenberg==
-
+﻿## <mark>Kortenberg</mark>
 **Le problème :** impossible de créer quoi que ce soit dans le home, ni fichier ni dossier accessible.
 
 ```bash
@@ -83,8 +82,7 @@ source .bashrc
 
 Résolu.
 
-## ==Manhattan==
-
+## <mark>Manhattan</mark>
 **Le problème :** PostgreSQL ne se connecte plus, locales qui semblent cassées au passage.
 
 ```bash
@@ -179,8 +177,7 @@ sudo -u postgres psql -c "insert into persons(name) values ('jane smith');" -d d
 ```
 
 Résolu.
-## ==Cape Town==
-
+## <mark>Cape Town</mark>
 **Le problème :** nginx down avec une erreur de syntaxe, puis une deuxième panne différente une fois la première réglée.
 
 ```bash

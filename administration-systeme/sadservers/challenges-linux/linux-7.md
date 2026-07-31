@@ -1,5 +1,4 @@
-﻿## ==Bekasi==
-
+﻿## <mark>Bekasi</mark>
 **Point de départ :** impossible de redémarrer nginx ou de vérifier sa conf normalement.
 
 ```bash

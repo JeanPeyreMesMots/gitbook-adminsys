@@ -158,11 +158,11 @@ L'application rencontre une erreur 403 lors de ses appels API. Après investigat
 
 Face à ce blocage, une simple page "hello world" en HTML est exposée sur le port 1234 via Nginx, en remplacement de l'application complète :
 
-![[Pasted image 20260608195746.png]]
+![](assets/Pasted image 20260608195746.png)
 
 Une règle de pare-feu correspondante est configurée sur AWS :
 
-![[Pasted image 20260609174854.png]]
+![](assets/Pasted image 20260609174854.png)
 
 > Une commande de création d'instance à partir d'une AMI a été notée à ce stade, mais son `--subnet-id` est resté vide dans les notes d'origine ; elle n'a donc pas été reprise comme étape à part entière ici (voir "Points à vérifier").
 
@@ -177,7 +177,7 @@ ubuntu@ip-172-31-29-20:~/mcflurry$ curl http://3.91.185.214:1234
 
 > Le réseau universitaire utilisé (eduroam) pour les tests bloquait le port exposé. Le site [browser.lol](https://browser.lol/), un navigateur dans un navigateur, permet dans ce cas de tester l'accès depuis un réseau extérieur, ce qui est très pratique pour ce genre de vérification.
 
-![[Pasted image 20260611171758.png]]
+![](assets/Pasted image 20260611171758.png)
 
 ### 5. Création d'une AMI à partir de l'instance configurée
 
@@ -252,7 +252,7 @@ i-01fec26f5dc98e17d     172.31.30.79    54.234.208.96   running t3.micro        
 
 Le site est bien accessible directement, sans aucune configuration manuelle supplémentaire, puisque tout est déjà embarqué dans l'AMI custom :
 
-![[Pasted image 20260611182806.png]]
+![](assets/Pasted image 20260611182806.png)
 
 ### 7. Généralisation avec un script userdata
 

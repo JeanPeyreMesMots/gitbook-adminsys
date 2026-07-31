@@ -8,7 +8,7 @@ Une **région** regroupe plusieurs zones de disponibilité, réparties sur diff�
 
 Il est possible de configurer le firewall pour qu'une application accède à des ressources situées dans un subnet privé, sans exposer ce subnet directement sur Internet.
 
-![[Pasted image 20260604181744.png]]
+![](assets/Pasted image 20260604181744.png)
 
 ### EC2 (Elastic Compute Cloud)
 
@@ -87,21 +87,21 @@ Ce mécanisme permet également une forme de "**failover**" basique : une adress
 
 Une instance est lancée en cohérence avec la stack technique visée. Ici, une AMI Ubuntu est choisie :
 
-![[Pasted image 20260605175138.png]]
+![](assets/Pasted image 20260605175138.png)
 
 Le type d'instance sélectionné est `t2.micro`, afin d'utiliser pleinement les ressources CPU disponibles sur cette offre.
 
 Création d'une key pair pour la connexion SSH :
 
-![[Pasted image 20260605175417.png]]
+![](assets/Pasted image 20260605175417.png)
 
 L'instance est ensuite créée, et son adresse IP publique devient visible :
 
-![[Pasted image 20260605175927.png]]
+![](assets/Pasted image 20260605175927.png)
 
 Elle est bien présente dans le subnet attendu :
 
-![[Pasted image 20260605180130.png]]
+![](assets/Pasted image 20260605180130.png)
 
 ### 2. Connexion SSH à l'instance
 
@@ -130,17 +130,17 @@ ubuntu@ip-172-31-34-9:~$
 
 Pour rendre l'application accessible sur le port 8000, il faut d'abord identifier le security group associé à l'instance :
 
-![[Pasted image 20260605181004.png]]
+![](assets/Pasted image 20260605181004.png)
 
 Le security group concerné est ici `launch-wizard-1` :
 
-![[Pasted image 20260605182010.png]]
+![](assets/Pasted image 20260605182010.png)
 
 Les règles de firewall entrantes/sortantes sont ensuite éditées pour autoriser ce port.
 
 > Il est préférable, en bonne pratique, d'autoriser l'accès à d'autres security groups plutôt qu'à une plage d'adresses CIDR ouverte à tous. Dans le cadre de cet exercice, l'approche la plus simple et la plus globale a été retenue, à savoir l'ouverture via CIDR pour l'ensemble des adresses :
 
-![[Pasted image 20260605182505.png]]
+![](assets/Pasted image 20260605182505.png)
 
 ### 4. Déploiement de l'application sur l'instance
 
@@ -203,15 +203,15 @@ KeyError: 'data'
 
 Un snapshot est créé, puis une image AMI, pour illustrer le mécanisme de sauvegarde :
 
-![[Pasted image 20260605185023.png]]
+![](assets/Pasted image 20260605185023.png)
 
 Interface de création d'une image :
 
-![[Pasted image 20260605185342.png]]
+![](assets/Pasted image 20260605185342.png)
 
 Le snapshot apparaît ensuite dans la liste correspondante :
 
-![[Pasted image 20260605185513.png]]
+![](assets/Pasted image 20260605185513.png)
 
 Il devient alors possible de démarrer de nouvelles instances directement à partir de ce snapshot. Une AMI créée à partir d'une machine déjà configurée permet de s'affranchir de toute la phase d'installation et de configuration habituellement nécessaire au démarrage d'une nouvelle instance.
 

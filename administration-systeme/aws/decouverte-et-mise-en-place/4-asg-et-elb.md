@@ -15,7 +15,7 @@ Enfin, les instances peuvent être réparties sur différentes zones de disponib
 - **Un Launch Template** définit précisément le type d'instance à lancer (AMI, type d'instance, clé SSH, security groups, etc.). C'est ce modèle que l'ASG utilise à chaque fois qu'il doit créer une nouvelle instance.
 - **Une Scaling policy** détermine sous quelles conditions des machines doivent être ajoutées ou retirées (par exemple, un seuil d'utilisation CPU ou de stockage).
 
-![[Pasted image 20260611191314.png]]
+![](assets/Pasted image 20260611191314.png)
 
 *"Et une de plus... ;)"*
 
@@ -41,11 +41,11 @@ Un ELB est généralement associé à une seule application. Il est possible de 
 
 Schéma d'ensemble de l'architecture :
 
-![[Pasted image 20260611193024.png]]
+![](assets/Pasted image 20260611193024.png)
 
 Cette combinaison ASG + ELB rend l'infrastructure autosuffisante, capable de s'adapter à la charge et de se réparer elle-même en cas de panne d'une instance :
 
-![[Pasted image 20260611195617.png]]
+![](assets/Pasted image 20260611195617.png)
 
 ---
 
@@ -53,7 +53,7 @@ Cette combinaison ASG + ELB rend l'infrastructure autosuffisante, capable de s'a
 
 L'exercice suivant sera réalisé directement en ligne de commande :
 
-![[Pasted image 20260613160233.png]]
+![](assets/Pasted image 20260613160233.png)
 
 **Ordre des opérations à respecter**, chaque étape dépendant souvent de l'ARN (identifiant de ressource) généré par l'étape précédente :
 
@@ -217,7 +217,7 @@ Cette commande crée automatiquement deux alarmes CloudWatch associées (seuil h
 
 Politique bien créée côté console :
 
-![[Pasted image 20260614002651.png]]
+![](assets/Pasted image 20260614002651.png)
 
 Le load balancer est désormais actif sur le port 8000, et sert bien la page de l'application :
 
@@ -277,4 +277,4 @@ Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00
 
 La politique de scaling fonctionne donc comme attendu, avec un scaling automatique déclenché par la charge CPU réelle :
 
-![[Pasted image 20260614011951.png]]
+![](assets/Pasted image 20260614011951.png)

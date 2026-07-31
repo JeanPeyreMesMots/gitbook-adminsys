@@ -1,9 +1,5 @@
 # AWS — Bonus : achat d'un nom de domaine et intégration avec Route 53 / ACM
 
-## Résumé rapide
-
-Tentative de génération d'un certificat SSL pour un domaine, découverte que le domaine n'était pas encore enregistré, achat du domaine `da-grind.fr` chez OVH, vérification de sa propagation DNS, puis connexion à AWS en CLI pour préparer le rattachement de ce domaine à Route 53 (changement des serveurs de noms côté OVH vers ceux fournis par AWS).
-
 ---
 
 ## Concepts clés

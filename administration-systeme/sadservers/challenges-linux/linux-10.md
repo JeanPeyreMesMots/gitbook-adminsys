@@ -1,4 +1,4 @@
-﻿## <mark>Kampot</mark>
+﻿## Kampot
 **Contexte :** une appli Python tourne sur le port 20280, gérée par supervisor, et ne peut pas être reconfigurée pour changer de port (contrainte de sécurité/legacy imposée). Objectif : rendre le service accessible localement sur le port 80 sans toucher à sa config.
 
 Réflexion partie sur iptables pour faire une redirection de port, confirmée par [cet article](https://blog.cloudfrancois.fr/2016-05-17-iptables-rule-forward-local/).
@@ -24,7 +24,7 @@ curl localhost:80/accounts
 ```
 
 Fonctionne du premier coup.
-## <mark>Valladolid</mark>
+## Valladolid
 **Contexte :** un service `log-cleaner` censé nettoyer les vieux logs, apparemment "fonctionnel" mais qui ne fait pas ce qu'il devrait.
 
 ### Diagnostic initial

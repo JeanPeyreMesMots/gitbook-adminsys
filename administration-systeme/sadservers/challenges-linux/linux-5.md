@@ -1,5 +1,4 @@
-﻿## ==Kihei== 
-
+﻿## Kihei
 **Objectif :** faire fonctionner `/home/admin/kihei` sans supprimer `/home/admin/datafile`. Le test de réussite : lancer le programme doit renvoyer `Done.`.
 ### Diagnostic initial : espace disque
 

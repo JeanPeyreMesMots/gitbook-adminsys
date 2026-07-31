@@ -1,4 +1,4 @@
-﻿## <mark>Batumi</mark>
+﻿## Batumi
 ### Reconnaissance
 
 ```bash

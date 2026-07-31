@@ -1,7 +1,7 @@
 ﻿# SadServers – Linux Challenges (2)
 
 Suite des challenges de troubleshooting Linux sur [SadServers](https://sadservers.com/).
-## <mark>Rio de Janeiro</mark>
+## Rio de Janeiro
 **Découverte de Jenkins.** Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre.
 
 ### Contexte
@@ -80,7 +80,7 @@ curl -s localhost:8888/login | grep Jenkins | head -n1
 ```
 
 Titre "Sign in - Jenkins" confirmé, l'interface web est accessible, challenge résolu.
-## <mark>Nuuk</mark>
+## Nuuk
 SSHNuke, référence à Matrix :P
 
 **Objectif :** SSH ne fonctionnait pas en local sur la machine, malgré la présence des bonnes clés dans `~/.ssh/authorized_keys`.
@@ -110,7 +110,7 @@ admin@i-0a31a7ab947fad896:~$
 ```
 
 Connexion réussie.
-## <mark>Cairo</mark>
+## Cairo
 **Contexte :** un script de health check critique (`/opt/scripts/health.sh`) est censé tourner toutes les 10 secondes via un timer systemd. Le script :
 
 ```bash
@@ -300,7 +300,7 @@ agent/check.sh
 ```
 
 Résolu.
-## <mark>Alexandria</mark>
+## Alexandria
 **Contexte :** un job de backup cron mal configuré.
 
 ```bash

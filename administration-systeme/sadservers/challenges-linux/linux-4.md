@@ -1,4 +1,4 @@
-## ==Oaxaca==
+﻿## ==Oaxaca==
 
 **Objectif :** fermer un fichier ouvert par un process, sans tuer ce process.
 

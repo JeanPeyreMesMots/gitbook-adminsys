@@ -1,4 +1,4 @@
-## ==Budapest==
+﻿## ==Budapest==
 
 **Objectif :** créer un compte pour chaque utilisateur listé dans `user_list.txt` (format `user;password`), avec le mot de passe correspondant.
 

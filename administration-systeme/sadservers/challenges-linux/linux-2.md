@@ -1,4 +1,4 @@
-# SadServers – Linux Challenges (2)
+﻿# SadServers – Linux Challenges (2)
 
 Suite des challenges de troubleshooting Linux sur [SadServers](https://sadservers.com/).
 ## ==Rio de Janeiro==

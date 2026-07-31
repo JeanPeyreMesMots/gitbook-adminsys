@@ -1,10 +1,10 @@
-# SadServers – Linux Challenges
+﻿# SadServers – Linux Challenges
 
 Solutions à des challenges de troubleshooting Linux sur la plateforme [SadServers](https://sadservers.com/) — accès SSH à une VM avec un problème réel à résoudre : permissions, services cassés, scripts, etc.
 
 ---
 
-## Apia
+## <mark>Apia</mark>
 
 **Objectif :** un mot a été ajouté dans un fichier parmi une centaine, il faut le retrouver et fournir la solution sous forme de hash MD5.
 
@@ -57,7 +57,7 @@ C'est bien le cas.
 
 ---
 
-## Tokamachi
+## <mark>Tokamachi</mark>
 
 **Objectif :** un writer doit envoyer des messages en continu dans un named pipe (`/home/admin/namedpipe`), un reader doit les capturer avec timestamp dans `/home/admin/reader.log`.
 
@@ -124,7 +124,7 @@ nohup /bin/bash -c 'while true; do echo "this is a test message being sent to th
 
 ---
 
-## Yokohama
+## <mark>Yokohama</mark>
 
 **Objectif :** gestion de permissions pour 4 users (abe, betty, carlos, debora) :
 
@@ -231,7 +231,7 @@ Done.
 
 ---
 
-## Fukuoka
+## <mark>Fukuoka</mark>
 
 **Objectif :** un serveur nginx renvoie une 404 par défaut au lieu de servir un fichier avec le message _"Welcome to the Real Site!"_.
 

@@ -1,4 +1,4 @@
-## ==Bekasi==
+﻿## ==Bekasi==
 
 **Point de départ :** impossible de redémarrer nginx ou de vérifier sa conf normalement.
 

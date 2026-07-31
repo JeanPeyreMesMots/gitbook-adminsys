@@ -1,4 +1,4 @@
-## ==Kampot==
+﻿## ==Kampot==
 
 **Contexte :** une appli Python tourne sur le port 20280, gérée par supervisor, et ne peut pas être reconfigurée pour changer de port (contrainte de sécurité/legacy imposée). Objectif : rendre le service accessible localement sur le port 80 sans toucher à sa config.
 

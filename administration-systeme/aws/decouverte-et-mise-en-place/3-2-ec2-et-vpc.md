@@ -11,8 +11,6 @@ Exercice pratique consistant à créer une instance EC2, y déployer une petite 
 
 ---
 
-## Procédure
-
 ### 1. Lister et supprimer les instances existantes
 
 Avant de créer une nouvelle instance, les instances existantes sont listées :

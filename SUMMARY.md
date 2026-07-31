@@ -18,13 +18,13 @@
     * [4 - Déploiement sans interruption](administration-systeme/ansible/decouverte-et-mise-en-place/day-4-deploiement-sans-interruption.md)
 * [☁️ AWS](administration-systeme/aws/README.md)
   * [☁️ Découverte et mise en place](administration-systeme/aws/decouverte-et-mise-en-place/README.md)
-    * [0 - Concepts & Fondamentaux](administration-systeme/aws/decouverte-et-mise-en-place/0-formation-aws-gratuite.md)
-    * [1 - IAM & CLI](administration-systeme/aws/decouverte-et-mise-en-place/1-iam-et-cli.md)
-    * [2 - S3 & CloudFront](administration-systeme/aws/decouverte-et-mise-en-place/2-s3-et-cloudfront-pt-1.md)
-    * [3 - EC2 & VPC](administration-systeme/aws/decouverte-et-mise-en-place/3-ec2-et-vpc.md)
-    * [3.2 - EC2 & VPC (Pt. 2)](administration-systeme/aws/decouverte-et-mise-en-place/3-2-ec2-et-vpc.md)
-    * [4 - ASG & ELB](administration-systeme/aws/decouverte-et-mise-en-place/4-asg-et-elb.md)
-    * [Bonus - Création d'un nom de domaine](administration-systeme/aws/decouverte-et-mise-en-place/bonus-creation-nom-de-domaine.md)
+    * [0 - Concepts & Fondamentaux](administration-systeme/aws/decouverte-et-mise-en-place/0-concepts-and-fondamentaux.md)
+    * [1 - IAM & CLI](administration-systeme/aws/decouverte-et-mise-en-place/1-iam-and-cli.md)
+    * [2 - S3 & CloudFront](administration-systeme/aws/decouverte-et-mise-en-place/2-s3-and-cloudfront.md)
+    * [3 - EC2 & VPC](administration-systeme/aws/decouverte-et-mise-en-place/3-ec2-and-vpc.md)
+    * [3.2 - EC2 & VPC (Pt. 2)](administration-systeme/aws/decouverte-et-mise-en-place/3.2-ec2-and-vpc-pt.-2.md)
+    * [4 - ASG & ELB](administration-systeme/aws/decouverte-et-mise-en-place/4-asg-and-elb.md)
+    * [Bonus - Création d'un nom de domaine](administration-systeme/aws/decouverte-et-mise-en-place/bonus-creation-dun-nom-de-domaine.md)
 
 ## 🧑‍🎓 Cours & TP M1 Cyber
 

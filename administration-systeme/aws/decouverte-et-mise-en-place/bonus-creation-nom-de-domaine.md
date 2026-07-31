@@ -1,9 +1,5 @@
 # AWS — Bonus : achat d'un nom de domaine et intégration avec Route 53 / ACM
 
----
-
-## Concepts clés
-
 ### Hosted Zone Route 53 et enregistrements obligatoires
 
 Lorsqu'une **Hosted Zone** est créée dans Route 53 pour un domaine, AWS génère automatiquement deux enregistrements obligatoires, qui ne peuvent pas être supprimés :

@@ -1,6 +1,5 @@
 ﻿# SadServers – Linux Challenges (2)
 
-Suite des challenges de troubleshooting Linux sur [SadServers](https://sadservers.com/).
 ## Rio de Janeiro
 **Découverte de Jenkins.** Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre.
 

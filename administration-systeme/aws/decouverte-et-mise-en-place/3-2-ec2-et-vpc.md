@@ -4,19 +4,6 @@
 
 Exercice pratique consistant à créer une instance EC2, y déployer une petite application web sur un port personnalisé, en faire une image AMI custom, puis relancer une instance à partir de cette AMI — le tout entièrement en ligne de commande avec l'AWS CLI. Passage ensuite à une approche plus générique via un script `userdata`, qui permet d'appliquer la même configuration à n'importe quelle AMI de base, sans avoir à créer une image custom à chaque fois.
 
----
-
-## Concepts clés
-
-### Objectif de l'exercice
-
-- Créer une instance EC2.
-- Cloner le [dépôt de l'application](https://github.com/ttwthomas/mcflurry) et vérifier que le site est accessible sur le port 1234, ouvert à tous (`0.0.0.0/0`).
-- Créer une image à partir de cette instance, terminer l'instance d'origine, puis relancer une nouvelle instance depuis cette image.
-- Configurer un `userdata` afin que la nouvelle instance serve automatiquement le site sans nécessiter de connexion SSH manuelle.
-- Vérifier que le site reste accessible sur le port 1234.
-- Bonus : réaliser l'ensemble de l'exercice via l'AWS CLI plutôt que par la console.
-
 ### AMI custom vs userdata : deux approches complémentaires
 
 - Une **AMI custom** embarque directement tout ce qui est nécessaire : le code de l'application, le service déjà configuré pour démarrer automatiquement, et le port applicatif déjà accessible. Elle est rapide à démarrer, mais doit être régénérée à chaque changement de configuration.

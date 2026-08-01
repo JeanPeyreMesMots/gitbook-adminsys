@@ -16,6 +16,8 @@ Hi everyone ! **JeanPeyreMesMots** ("LosingMyWords" in english ahah) 25 yo, IT t
 * GSM Researching
 * Coding : Bash, Python, Powershell
 
+You will find here all my Write Ups, notes and research done in the case of my switching from IT Technican to become a System Administrator. Everything is in french for now but will be translated soon, and more content is about to be added, stay tuned ;)
+
 ## All other social medias pages
 
 You can find all my social medias, including training platforms such as Root-Me and TryHackMe profils, here :

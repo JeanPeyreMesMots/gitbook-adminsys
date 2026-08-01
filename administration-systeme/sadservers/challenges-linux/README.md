@@ -1,3 +1,1 @@
 # 🐧 Challenges Linux
-
-TEST SECTION

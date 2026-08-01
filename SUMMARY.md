@@ -41,7 +41,7 @@
     * [1 - Salta, Venice, Tarifa, Helsingør, Bharuch, Quito & Atlantis](administration-systeme/sadservers/challenges-docker/docker-1.md)
     * [2 - Auderghem, Woluwe, Torino & San-juan](administration-systeme/sadservers/challenges-docker/docker-2.md)
   * [🌐 Challenges Web](administration-systeme/sadservers/challenges-web/README.md)
-    * [1 - Geneva, Tokyo, Marseille, Paris](administration-systeme/sadservers/challenges-docker/web-server.md)
+    * [1 - Geneva, Tokyo, Marseille, Paris](administration-systeme/sadservers/challenges-web/web-server.md)
 
 
 ## 🧑‍🎓 Cours & TP M1 Cyber

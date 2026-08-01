@@ -38,7 +38,9 @@
     * [9 - Budapest, Tukaani, Tokelau, Hanoi & Kampala](administration-systeme/sadservers/challenges-linux/linux-9.md)
     * [10 - Bizerte, Kampot & Valladolid](administration-systeme/sadservers/challenges-linux/linux-10.md)
   * [🐋 Challenges Docker](administration-systeme/sadservers/challenges-docker/README.md)
-
+    * [1 - Salta, Venice, Tarifa, Helsingør, Bharuch, Quito & Atlantis](administration-systeme/sadservers/challenges-docker/docker-1.md)
+    * [2 - Auderghem, Woluwe, Torino & San-juan](administration-systeme/sadservers/challenges-docker/docker-2.md)
+    * [3 - HAProxy & nginx multi-backend](administration-systeme/sadservers/challenges-docker/docker-3.md)
 
 ## 🧑‍🎓 Cours & TP M1 Cyber
 

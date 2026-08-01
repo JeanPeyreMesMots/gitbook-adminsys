@@ -20,6 +20,6 @@ You will find here all my Write Ups, notes and research done in the case of my s
 
 ## All other social medias pages
 
-You can find all my social medias, including training platforms such as Root-Me and TryHackMe profils, here :
+You can find all my social medias, including training platforms such as SadServers and Root-Me here :
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)

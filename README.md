@@ -8,7 +8,7 @@ description: My presentation page ;)
 
 <figure><img src=".gitbook/assets/stonks_gold.jpg" alt=""><figcaption></figcaption></figure>
 
-Hi everyone ! **JeanPeyreMesMots** ("LosingMyWords" in english ahah) 24 yo, IT technician and a sysaddmin/cybersecurity enthusiast who likes anything with an engine and four wheels. Fields I love the most about IT are :&#x20;
+Hi everyone ! **JeanPeyreMesMots** ("LosingMyWords" in english ahah) 24 yo, IT technician and a sysadmin/cybersecurity enthusiast who likes anything with an engine and four wheels. Fields I love the most about IT are :&#x20;
 
 * OSINT
 * Pentest Web

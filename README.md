@@ -1,5 +1,5 @@
 ---
-description: My presentation page ;)
+description: Ma page de présentation
 ---
 
 # 👋 À propos de moi

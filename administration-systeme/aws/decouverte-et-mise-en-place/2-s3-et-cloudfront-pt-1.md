@@ -2,31 +2,29 @@
 
 #### S3 (Simple Storage Service)
 
-S3 est Service de stockage **objet** avec une API permettant de sauvegarder et récupérer des fichiers. Un **bucket** quand à lui est le dossier racine dans lequel sont placés les fichiers et sous-dossiers.
+S3 est Service de stockage **objet** avec une API permettant de sauvegarder et récupérer des fichiers. Un **bucket** S3 désigne lui le dossier racine dans lequel sont placés les fichiers et sous-dossiers. Le nom d'un bucket appartient à un **namespace global** : il doit être unique à l'échelle de tout AWS, comme un nom de domaine. C'est généralement le premier point à vérifier avant de créer un bucket.
 
-Le nom d'un bucket appartient à un **namespace global** : il doit être unique à l'échelle de tout AWS, comme un nom de domaine. C'est généralement le premier point à vérifier avant de créer un bucket.
-
-AWS annonce des dispo de l'ordre de 99,95 %, soit quelques heures d'indisponibilité en moyenne par an (de l'ordre de 4h/an). A cela s'ajoute une durabilité de 99,9999999 %, c'est-à-dire une probabilité extrêmement faible qu'un fichier soit définitivement perdu sur une année. Cette durabilité s'appuie sur une redondance des fichiers répartis sur plusieurs data centers.
+AWS annonce des dispo de l'ordre de **99,95 %**, soit quelques heures d'indisponibilité en moyenne par an (de l'ordre de 4h/an). A cela s'ajoute une durabilité de **99,9999999 %**, c'est-à-dire une probabilité extrêmement faible qu'un fichier soit définitivement perdu sur une année. Cette durabilité s'appuie sur une redondance des fichiers répartis sur plusieurs data centers.
 
 #### Tarification S3
 
-* Le stockage de données dans S3 demeure gratuit à l'entrée : ce qui coûte, c'est ce qui **sort** (la bande passante sortante), ainsi que les requêtes effectuées.
-* Le coût dépend de la bande passante consommée (poste de coût le + important), du nombre de requêtes et du volume de données stocké.
+* Le stockage de données dans S3 demeure gratuit à l'entrée. Ce qui coûte, c'est la bande passante sortante et les requêtes effectuées.
+* Le coût dépend de la bande passante consommée, le coût le + important et du volume de données stocké.
 * Les données peuvent être classées selon leur fréquence d'accès :
   * données **chaudes** : accès fréquent
-  * données **tièdes** : accès occasionnel, sans forte consommation de bande passante, stockées sur HDD plutôt que SSD/NVMe
-  * données **froides** : accès rare, avec support - facilement accessible => - coûteux au GO (offre de type "Glacier")
-* **S3 Intelligent-Tiering** permet de laisser AWS décider automatiquement de la classe de stockage la plus adaptée à chaque fichier, en fonction de son usage réel.
+  * données **tièdes** : accès occasionnel, sans forte consommation de bande passante, avec stockage HDD plutôt que SSD/NVMe
+  * données **froides** : accès rare, avec support moins facilement accessible, mais moins coûteux au GO (aussi appelé offre "Glacier")
+* Le **S3 Intelligent-Tiering** permet de laisser AWS décider du type de stockage le plus adapté pour les fichiers en fonction de son usage réel.
 
 #### CloudFront (CDN)
 
-CloudFront est un CDN (Content Delivery Network), c'est-à-dire un service de mise en cache d'un site web à l'échelle mondiale, comparable à Cloudflare ou Fastly.
+**CloudFront** est un CDN (**Content Delivery Network**), c'est-à-dire un service de mise en cache d'un site web à l'échelle mondiale, comparable à CloudFlare ou Fastly.
 
-Il réduit fortement le travail d'infra nécessaire côté utilisateur, puisque AWS dispose de nombreux data centers dans le monde, dont certains sont dédiés spécifiquement à CloudFront, avec réplication accrue. Le trafic est systématiquement servi en HTTPS.
+Il réduit fortement le travail d'infra nécessaire côté utilisateur, car AWS dispose de beaucoup de data centers dans le monde. Certains sont dédiés spécifiquement à CloudFront, assurant alors une réplication accrue, avec trafic 100% en HTTPS.
 
 #### Route53
 
-Il s'agit du service de gestion de DNS (le nom fait référence au port 53, utilisé par le protocole DNS). Fonctionne comme un "DNS as a service", accessible via API et est Facturé environ 0,50 $ par zone DNS.
+Il s'agit du service de gestion de DNS (le nom fait référence au port 53, utilisé par le protocole DNS). Il fonctionne comme un "**DNS as a service**", accessible via API et est Facturé environ 0,50 $ par zone DNS.
 
 #### AWS Certificate Manager (ACM)
 
@@ -62,7 +60,7 @@ Une clé de chiffrement personnalisée est mise en place :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530164458.png)
 
-Vérification : tout le monde dispose désormais d'un droit de lecture sur cet objet :
+On vérifie que tout le monde dispose désormais d'un droit de lecture sur cet objet :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530164536.png)
 
@@ -70,21 +68,21 @@ En accédant au lien public (`https://cocadmin-blog-s3.s3.us-east-1.amazonaws.co
 
 ![](../../../.gitbook/assets/Pasted_image_20260530164721.png)
 
-> À ce stade, la requête HTTP se comporte plus comme un appel d'API que comme une requête vers un serveur web classique, avec les autorisations appliquées par défaut. Par exemple, l'endpoint `https://cocadmin-blog-s3.s3.us-east-1.amazonaws.com/posts` n'est volontairement pas accessible :
+À ce stade, la requête HTTP se comporte plus comme un appel d'API que comme une requête vers un serveur web classique, avec les autorisations appliquées par défaut. Par exemple, l'endpoint `https://cocadmin-blog-s3.s3.us-east-1.amazonaws.com/posts` n'est volontairement pas accessible :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530164928.png)
 
-> Le message renvoyé est "Access denied", alors qu'en réalité l'objet n'existe simplement pas à cet endroit. Ce comportement peut prêter à confusion.
+Le message renvoyé est "**Access denied**", alors qu'en réalité l'objet n'existe simplement pas à cet endroit. Ce comportement peut prêter à confusion.
 
 Le bucket est ensuite transformé en site web statique :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530165423.png)
 
-Une nouvelle URL est alors générée : `http://cocadmin-blog-s3.s3-website-us-east-1.amazonaws.com/` et le site et la ressource est désormais accessible ;)
+Une nouvelle URL est alors générée : `http://cocadmin-blog-s3.s3-website-us-east-1.amazonaws.com/` et le site et la ressource est désormais accessible !
 
 #### 2. Mise en place de CloudFront (via la console)
 
-Le mode "site web" de S3 ne permet pas de choisir librement son propre nom de domaine ; CloudFront est donc utilisé pour résoudre ce problème. N'importe quel domaine peut y être associé, par exemple `cocadmin-blog-mcflurry` :
+Le mode "**site web**" de S3 ne permet pas de choisir librement son propre nom de domaine. CloudFront est donc utilisé pour résoudre ce problème. N'importe quel domaine peut y être associé, par exemple `cocadmin-blog-mcflurry` :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530170910.png)
 
@@ -92,7 +90,7 @@ Récapitulatif global de la configuration avant déploiement :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530172216.png)
 
-Le déploiement démarre. Il prend un certain temps car la configuration doit être propagée à travers l'ensemble des points de présence CloudFront dans le monde, à peu près 150 serveurs répartis ! :
+Le déploiement démarre. Il prend un certain temps car la configuration doit être propagée à travers l'ensemble des points de présence CloudFront, ce qui représente environ 150 serveurs dans le monde ! :
 
 ![](../../../.gitbook/assets/Pasted_image_20260530172355.png)
 
@@ -114,7 +112,7 @@ Un nom de domaine de distribution est désormais disponible et accessible : `htt
 
 #### 3. Reproduction en ligne de commande
 
-La même chose peut être faite via CLI de la façon suivante. On se connecte d'abord un profil et des identifiants dédiés :
+La même chose peut être faite via CLI de la façon suivante. On se créé d'abord un profil et des identifiants dédiés :
 
 ```bash
 jpmm@kos-boss:~/Documents/aws-formation$ aws login --profile myProfile
@@ -140,7 +138,7 @@ Réception d'objets: 100% (156/156), 51.24 Kio | 17.08 Mio/s, fait.
 Résolution des deltas: 100% (81/81), fait.
 ```
 
-Puis on créé le bucket S3 dédié à :
+Puis on créé le bucket S3 dédié :
 
 ```bash
 jpmm@kos-boss:~/Documents/aws-formation/mcflurry/static$ aws s3 website s3://mcflurry-kostan
@@ -190,7 +188,7 @@ upload: ./missingflurry.js to s3://mcflurry-kostan/missingflurry.js
 
 Puis on vérifie les buckets existants pour récupérer l'URI et la région du bucket :
 
-> La première tentative échoue faute d'avoir précisé le profil (`--profile myProfile`), ce qui empêche la CLI de résoudre correctement l'endpoint régional.
+La première tentative échoue faute d'avoir précisé le profil (`--profile myProfile`), ce qui empêche la CLI de résoudre correctement l'endpoint régional. On corrige ça en suivant :
 
 ```bash
 $ aws s3api list-buckets --profile myProfile
@@ -241,7 +239,7 @@ PING s3-website.eu-west-3.amazonaws.com (3.5.204.88) 56(84) bytes of data.
 
 > Il est également possible d'accéder au site via l'URL "brute" du bucket (sans le mode website), à condition de préciser explicitement `index.html` dans l'URL : `http://mcflurry-kostan.s3.amazonaws.com/index.html`. Ce point pourrait être amélioré, mais n'a pas été creusé davantage ici.
 
-On peut passer à la création de la distribution CloudFront :
+On passe à la création du CDN :
 
 ```bash
 aws cloudfront create-distribution \
@@ -269,13 +267,13 @@ Le nouveau domaine CloudFront (`d28afch530uznb.cloudfront.net`) donne désormais
 
 ![](../../../.gitbook/assets/Pasted_image_20260603193803.png)
 
-> La propagation DNS à travers le monde prend un peu de temps, le temps que la configuration se diffuse sur l'ensemble des serveurs AWS. Un outil comme [whatsmydns.net](https://www.whatsmydns.net/) permet de suivre cette propagation depuis différents points du globe.
+La propagation DNS à travers le monde prend un peu de temps, le temps que la configuration se diffuse sur l'ensemble des serveurs AWS. Un outil comme [whatsmydns.net](https://www.whatsmydns.net/) permet de suivre cette propagation depuis différents points du globe.
 
 ![](../../../.gitbook/assets/Pasted_image_20260603194456.png)
 
 #### 4. Test de l'invalidation de cache CloudFront
 
-Pour vérifier que CloudFront fonctionne correctement, une modification est apportée au fichier `map.js` du site : l'import de `styles.js` en première ligne est remplacé par `styles2.js`, ce qui a pour effet d'activer un mode sombre sur le site.
+Pour vérifier que CloudFront fonctionne correctement, on fait une modification au fichier `map.js` du site : l'import de `styles.js` en première ligne est remplacé par `styles2.js`, ce qui a pour effet d'activer un mode sombre sur le site.
 
 ```js
 $ head map.js 
@@ -292,9 +290,7 @@ export class Map {
       zoom: 11,
 ```
 
-Une fois ce fichier ré-uploadé sur le bucket, le changement est visible sur l'URL directe du bucket S3, mais **pas** sur l'adresse CloudFront. C'est un comportement attendu : CloudFront conserve en cache l'ancienne version du site, ce qui est précisément son rôle. Une **invalidation** est donc nécessaire pour forcer la prise en compte du changement.
-
-Le fichier modifié est d'abord copié vers le bucket :
+Une fois ce fichier ré-uploadé sur le bucket :
 
 ```bash
 aws s3 cp --acl public-read map.js s3://mcflurry-kostan --profile myProfile
@@ -309,7 +305,7 @@ Mais pas encore sur l'adresse CloudFront :
 
 ![](../../../.gitbook/assets/Pasted_image_20260603200452.png)
 
-Une invalidation est alors créée, en ciblant l'ID de la distribution CloudFront concernée :
+Le changement est visible sur l'URL directe du bucket S3, mais **pas** sur l'adresse CloudFront. Il faut donc **invalider** pour forcer la prise en compte du changement. On procède donc en suivant, en ciblant l'ID de la distribution CloudFront concernée :
 
 ```bash
 aws cloudfront create-invalidation --distribution-id EKNOL67BI2LBP --path "/maps.js" --profile myProfile

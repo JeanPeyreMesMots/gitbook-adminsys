@@ -202,6 +202,6 @@ entry #3
 
 Aucun downtime n'a été constaté, y compris pendant le déploiement lui-même. Il est désormais possible de déployer en pleine journée, sereinement, sans interruption de service pour les utilisateurs.
 
-À savoir quand dans le contexte d'une infra réél, des modules existent pour notifier automatiquement la fin d'un déploiement. Par exemple un module d'envoi d'e-mail ou un module d'envoi de message Slack une fois le déploiement terminé avec succès.
+À savoir quand dans le contexte d'une infra réelle, des modules existent pour notifier automatiquement la fin d'un déploiement. Par exemple un module d'envoi d'e-mail ou un module d'envoi de message Slack une fois le déploiement terminé avec succès.
 
 Il est recommandé de vérifier avant de déployer sur Ansible Galaxy si des rôles existants permettent de simplifier davantage la gestion de la configuration HAProxy.

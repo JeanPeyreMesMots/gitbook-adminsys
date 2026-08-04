@@ -6,7 +6,7 @@ description: Découverte de Ansible
 
 Dans le cadre de ma reconversion en tant que sysadmin, je publierais ici mes notes prises durant la formation de Cocadmin sur Ansible. Une formation que m'a été fort utile pour pouvoir reprendre la connaissance de cet outil que j'avais déjà utilisé durant mon alternance à la région Nouvelle Aquitaine en année de Licence.
 
-La première étape de ma formaiton consiste à mettre en place un environnement de test permettant d'apprendre et d'utiliser Ansible.
+La première étape de ma formation consiste à mettre en place un environnement de test permettant d'apprendre et d'utiliser Ansible.
 
 Les objectifs sont divisés tel quel :
 

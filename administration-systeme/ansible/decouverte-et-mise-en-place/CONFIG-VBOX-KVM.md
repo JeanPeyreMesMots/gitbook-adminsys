@@ -1,16 +1,16 @@
-# 1) Configuration VirtualBox côté Windows
+---
+description: On va s'occupe rici
+---
 
-## Arrêter complètement la VM
+# Configuration des VM Multipass
 
-Dans Ubuntu :
+On commence déjà par arrêter complètement la VM dans Ubuntu :
 
 ```bash
 sudo poweroff
 ```
 
----
-
-## Activer la virtualisation imbriquée
+### Activer la virtualisation imbriquée
 
 Ouvrir **PowerShell administrateur**.
 
@@ -32,9 +32,9 @@ Activer Nested Paging :
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nestedpaging on
 ```
 
----
+***
 
-## Vérifier la configuration
+### Vérifier la configuration
 
 ```powershell
 .\VBoxManage.exe showvminfo "Ubuntu-JPMM-CLONADO" | Select-String "Nested VT-x","Nested Paging","Hardware Virtualization"
@@ -48,9 +48,9 @@ Nested Paging:      enabled
 Hardware Virtualization: enabled
 ```
 
----
+***
 
-# 2) Configuration CPU/RAM VirtualBox
+## 2) Configuration CPU/RAM VirtualBox
 
 Dans VirtualBox :
 
@@ -69,9 +69,9 @@ Options :
 [x] Pagination imbriquée
 ```
 
----
+***
 
-# 3) Démarrer Ubuntu et vérifier KVM
+## 3) Démarrer Ubuntu et vérifier KVM
 
 Dans Ubuntu :
 
@@ -88,7 +88,7 @@ kvm
 irqbypass
 ```
 
----
+***
 
 Vérifier que KVM est exposé :
 
@@ -102,7 +102,7 @@ Résultat attendu :
 crw-rw----+ 1 root kvm ... /dev/kvm
 ```
 
----
+***
 
 Tester :
 
@@ -119,9 +119,9 @@ INFO: /dev/kvm exists
 KVM acceleration can be used
 ```
 
----
+***
 
-# 4) Installer Multipass dans Ubuntu
+## 4) Installer Multipass dans Ubuntu
 
 Si besoin :
 
@@ -135,11 +135,11 @@ Tester :
 multipass version
 ```
 
----
+***
 
-# 5) Créer le lab
+## 5) Créer le lab
 
-## VM Ansible
+### VM Ansible
 
 ```bash
 multipass launch 22.04 \
@@ -160,9 +160,9 @@ Entrer dedans :
 multipass shell ansible-main
 ```
 
----
+***
 
-## VM Web 1
+### VM Web 1
 
 ```bash
 multipass launch 22.04 \
@@ -171,9 +171,9 @@ multipass launch 22.04 \
 -m 1G
 ```
 
----
+***
 
-## VM Web 2
+### VM Web 2
 
 ```bash
 multipass launch 22.04 \
@@ -182,9 +182,9 @@ multipass launch 22.04 \
 -m 1G
 ```
 
----
+***
 
-# 6) Vérifier le réseau
+## 6) Vérifier le réseau
 
 ```bash
 multipass list
@@ -205,9 +205,9 @@ Tester :
 ping 10.3.241.40
 ```
 
----
+***
 
-# 7) Si Multipass casse après un crash
+## 7) Si Multipass casse après un crash
 
 Nettoyage :
 
@@ -222,11 +222,11 @@ Puis vérifier :
 multipass list
 ```
 
----
+***
 
-# 8) Si tu retombes sur cette erreur
+## 8) Si tu retombes sur cette erreur
 
-## Erreur :
+### Erreur :
 
 ```
 launch failed:
@@ -257,9 +257,9 @@ refaire :
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nestedpaging on
 ```
 
----
+***
 
-# 9) Le piège qu'on a rencontré
+## 9) Le piège qu'on a rencontré
 
 Au début on avait :
 
@@ -298,11 +298,11 @@ VirtualBox
  └── Nested Paging       ON
 ```
 
----
+***
 
-# Commandes de diagnostic utiles à garder
+## Commandes de diagnostic utiles à garder
 
-### Windows PowerShell
+#### Windows PowerShell
 
 ```powershell
 VBoxManage showvminfo "Ubuntu-JPMM-CLONADO"
@@ -314,9 +314,9 @@ ou :
 VBoxManage --version
 ```
 
----
+***
 
-### Ubuntu
+#### Ubuntu
 
 ```bash
 lsmod | grep kvm
@@ -328,6 +328,6 @@ kvm-ok
 multipass list
 ```
 
----
+***
 
 On maintenant un **mini cluster Ansible de labo dans une VM VirtualBox**, avec KVM accéléré au lieu d'une émulation lente. C'était le bon chemin, le problème était juste la couche de virtualisation imbriquée.

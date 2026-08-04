@@ -4,15 +4,13 @@ description: Mise en place du serveur
 
 # 1 - Installation et configuration
 
-Dans un premier temps, on commence par installer Windows Server 2019 en local sur ma machine. Le choix de l'hypervisuer se porte sur VMWare, où je trouve qu'il est plus aisé de créer des sous-réseaux distincts et est plus efficace dans la gestion des ressources :).
+Dans un premier temps, on commence par installer Windows Server 2019 en local sur ma machine. Le choix de l'hyperviseur se porte sur VMWare, où je trouve qu'il est plus aisé de créer des sous-réseaux distincts et est plus efficace dans la gestion des ressources 🙂
 
 On commence donc par récupérer l'ISO de Windows Server 2019 : [https://www.microsoft.com/fr-fr/evalcenter/download-windows-server-2019](https://www.microsoft.com/fr-fr/evalcenter/download-windows-server-2019)
 
-Puis on installe en bare-metal sur la machine :
+Puis on l'installe en bare-metal sur la machine :
 
 <figure><img src="../../../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
-
-Note : j'ai choisi évidemment un mot de passe des plus fort pour l'utilisateur "Administrateur" du DC.
 
 Une fois l'install des VMWare Tools, du fullscreen ok... on a maintenant notre Windows Serveur installé :
 
@@ -54,7 +52,7 @@ mesmots.local
     └── OU Ordinateurs
 ```
 
-De ce fait on se retrouve avec l'arborescence complète suivante. Avec chaque utilisateur appartenant à un groupe au format "GRP\_CODIR", "GRP\_ADMIN"... suivant le nom de l'OU :
+De ce fait on se retrouve avec l'arborescence complète suivante. Avec chaque utilisateur appartenant à un groupe au format "**GRP\_CODIR**", "**GRP\_ADMIN**"... suivant le nom de l'OU :
 
 ```rust
 mesmots.local
@@ -116,7 +114,7 @@ Une fois le disque créé on ouvre "**diskmgmt.msc"** sur l'AD, puis on peut le 
 
 <figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-Le disque est ensuite monté en D:/. On y créé dessus un dossier nommé "**Partages**" et on peut ensuite y créer les dossiers avec leurs arborescences correspondant aux OU. En témoigne le listing du répertoire dessus :
+Le disque est ensuite monté en **D:/**. On y créé dessus un dossier nommé "**Partages**" et on peut ensuite y créer les dossiers avec leurs arborescences correspondant aux OU. En témoigne le listing du répertoire dessus :
 
 ```powershell
 PS C:\Users\Administrateur> cd D:\Partages
@@ -174,7 +172,7 @@ Mode                LastWriteTime         Length Name
 d-----       15/04/2026     20:20                Profs
 ```
 
-Le TP me parle de X:, P:, etc. comme lecteurs mappés sur les clients. En partant de ce modèle, j'ai choisi que chaque lecteur portera les lettres suivantes :
+Le TP me parle de **X:**, **P:**, etc. comme lecteurs mappés sur les clients. En partant de ce modèle, j'ai choisi que chaque lecteur portera les lettres suivantes :
 
 * **X:** = partage SMB qui pointe vers "**D:\Partages**" (racine)
 * **P:** = partage SMB qui pointe vers "**D:\Users{Username}**"
@@ -193,7 +191,7 @@ Le partage est créé, et il est maintenant visible dans la liste des partages :
 
 <figure><img src="../../../.gitbook/assets/image (76).png" alt=""><figcaption></figcaption></figure>
 
-Note : les permissions ont été laissés par défaut, car elles seront modifiées plus tard avec la méthode AGLP
+_Note : les permissions ont été laissés par défaut, car elles seront modifiées plus tard avec la méthode AGLP_
 
 ### Définitions des permissions sur le partage :
 
@@ -217,7 +215,7 @@ Puis on donne accès en lecture à ce groupe sur le dossier "**D:/Partages**" cr
 
 <figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-Les permissions NTFS sont définissables via un clique droit sur un sous dossier du partage "D:/Partages". Par exemple, pour définir la bonne permission sur le sous-dossier "COMMUN", on fait clique droit > Propriétés > Avancés en bas à droite :
+Les permissions NTFS sont définissables via un clique droit sur un sous dossier du partage "**D:/Partages**". Par exemple, pour définir la bonne permission sur le sous-dossier "COMMUN", on fait clique droit > Propriétés > Avancés en bas à droite :
 
 <figure><img src="../../../.gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
 
@@ -272,7 +270,7 @@ Chaque groupe possède alors granulairement les permissions qu'il lui fait pour 
 
 Maintenant que le serveur et que le partage sont en place, on peut créer une VM Windows 11 qui sera dans le même réseau local, pour simuler un poste client.
 
-_Note : Pour permettre la jonction avec l'AD il est essentiel de choisir la version "Pro"._
+_Note : Pour permettre la jonction avec l'AD, il est essentiel de choisir la version "Pro"._
 
 Une fois la VM installée, procède à un debloating de Windows via [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) pour libérer de la ressource sur ma machine et avoir un système plus léger :
 
@@ -315,7 +313,7 @@ Quitte à aller jusqu'au bout on peut aussi bloquer l'IP pour le PC Windows 11 a
 
 <figure><img src="../../../.gitbook/assets/image (95).png" alt=""><figcaption></figcaption></figure>
 
-On remarque ainsi que notre machine WIN-11 récupère bien une IP + le FQDN du serveur associé :
+On remarque ainsi que notre machine **WIN-11** récupère bien une IP + le FQDN du serveur associé :
 
 ```powershell
 PS C:\WINDOWS\system32> ipconfig /all

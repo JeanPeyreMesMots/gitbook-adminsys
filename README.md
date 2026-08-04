@@ -2,21 +2,23 @@
 description: My presentation page ;)
 ---
 
-# 👋 About me
+# 👋 À propos de moi
 
 <figure><img src=".gitbook/assets/stonks_gold.jpg" alt=""><figcaption></figcaption></figure>
 
-Hi everyone ! **JeanPeyreMesMots** ("LosingMyWords" in english ahah) 25 yo, IT technician and a sysadmin/cybersecurity enthusiast who likes anything with an engine and four wheels. Fields I love the most about IT are :&#x20;
+Bonjour à tous ! **JeanPeyreMesMots** (mon pseudo ; vrai nom Kostan), 25 ans, technicien informatique et aspirant sysadmin qui aime n'importe quoi qui a un moteur et 4 roues 😉 Les domaines de l'IT que j'adore le plus sont :
 
-* System Administration
-* OSINT
-* Pentest Web
-* Linux attacks
-* Mobile attacks
+* l'Administration Système
+* l'OSINT
+* le Cloud
+* le Pentest Web
+* les attaques Linux
+* la Sécurité Mobile
+
 * Coding : Bash, Python, Powershell
 
-## All other social medias pages
+Vous trouverez ici tous mes articles, notes et recherches réalisés dans le cadre de ma reconversion professionnelle. Tout est en français pour l'instant, mais sera bientôt traduit, et d'autres contenus sont sur le point d'être ajoutés 😉
 
-You can find all my social medias, including training platforms such as Root-Me and TryHackMe profils, here :&#x20;
+Vous trouverez ici tous les liens vers mes profils sociaux, y compris les plateformes d'entraînement telles que SadServers et Root-Me :
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)

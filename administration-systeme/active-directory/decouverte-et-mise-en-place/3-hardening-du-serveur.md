@@ -25,7 +25,7 @@ Ce qui est courant sur une conf par défaut quand on installe. De nombreux point
 | **Object configuration**         | 1     | Defender ASR n’est pas entièrement en mode Block/Warn, certaines options de fichiers sont risquées, Kerberos Armoring est à vérifier, et Terminal Services GPO n’est pas conforme [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html). |
 | **Reconnaissance**               | 0     | DsHeuristics ne mitige pas CVE-2021-42291, NetCease n’est pas trouvé, PreWin2000 contient “Authenticated Users”, et Anonymous Binding au rootDSE est activé [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                       |
 
-On va donc régler tout ça ;)
+On va donc régler tout ça 😎
 
 ### Désactiver NTLM :
 
@@ -144,9 +144,7 @@ On rouvre une session sur le PC client, puis on remarque que sur le journal d'é
 
 <figure><img src="../../../.gitbook/assets/image (130).png" alt=""><figcaption></figcaption></figure>
 
-Le LAPS s'est bien appliqué.
-
-On récupère ensuite le mot de passe assigné pour le PC en question via la commande Powershell :
+Le LAPS s'est bien appliqué. On récupère ensuite le mot de passe assigné pour le PC en question via la commande PowerShell :
 
 ```powershell
 PS C:\Users\Administrateur> Get-LapsADPassword "WIN11-HOME-LAB" -AsPlainText
@@ -164,12 +162,12 @@ AuthorizedDecryptor : MESMOTS0\Admins du domaine
 
 On peut désormais lancer un programme en tant qu'admin sur le PC client en spécifiant bien dans l'UAC qui s'affiche :
 
-* ".\Administrateur" comme username (j'oubliais le .\ pour spécifier que c'est un compte local au début ce qui fait que j'ai été bloqué pour rien 1h haha)
-* Et le mot de passe généré par LAPS
+* "**.\Administrateur**" comme username (j'oubliais le **.\\** pour spécifier que c'est un compte local au début ce qui fait que j'ai été bloqué pendant presque 1 heure 😄)
+* Et le mot de passe généré par LAPS :
 
 <figure><img src="../../../.gitbook/assets/image (131).png" alt=""><figcaption></figcaption></figure>
 
-On a maintenant un shell "System32" sur le PC ce qui veut dire que le compte admin passe bien !
+On a maintenant un shell "**System32**" sur le PC ce qui veut dire que le compte admin passe bien !
 
 <figure><img src="../../../.gitbook/assets/image (132).png" alt=""><figcaption></figcaption></figure>
 

@@ -1,10 +1,8 @@
 # 1 - Mise en place de l'environnement
 
-***
+### Pourquoi Ansible ?
 
-## Pourquoi Ansible ?
-
-![](<../../../.gitbook/assets/image (10).png>)
+<div align="left"><img src="../../../.gitbook/assets/image (10).png" alt="" width="224"></div>
 
 Ansible est un outil d'automatisation permettant de gérer un grand nombre de serveurs sans devoir intervenir manuellement sur chacun d'eux.
 
@@ -12,12 +10,12 @@ Il permet notamment :
 
 * d'automatiser la configuration des serveurs ;
 * de standardiser les installations ;
-* déployer des applications ;
-* d'exécuter des tâches d'administration sur plusieurs machines simultanément.
+* de déployer des applications ;
+* d'exécuter des tâches sur plusieurs machines simultanément.
 
-En effet, lorsque le nombre de serveurs augmente, les interventions manuelles deviennent longues. Certains serveurs deviennent des **Flocons de neiges** (machines uniques et fragiles), suscitant de l’appréhension pour les déploiements. Dans plusieurs infras, on assiste donc à l'apparition de plusieurs scripts d'automatisation, difficiles à maintenir.
+En effet lorsque le nombre de serveurs augmente, les tâches manuelles dessus deviennent longues. Certains serveurs deviennent des **flocons de neiges** (machines uniques et fragiles) qui provoquent de l’appréhension pour les déploiements. Dans plusieurs infras on assiste ainsi à l'apparition de plusieurs scripts d'automatisations, difficiles à maintenir.
 
-L'objectif est donc de rendre les déploiements reproductibles, fiables et automatisés.
+L'objectif d'Ansible est d'éviter ça, en rendant les déploiements reproductibles, fiables et automatisés, et surtout, **idempotent**.
 
 La formation sera organisée en trois grandes parties :
 
@@ -28,27 +26,25 @@ Comment réaliser rapidement des actions de maintenance sur plusieurs machines, 
 * récupérer une version d'application ;
 * lancer une commande sur plusieurs serveurs.
 
-> Cette pratique reste exceptionnelle : les actions de masse doivent idéalement être automatisées via des playbooks.
+> Cette pratique reste exceptionnelle : les actions de masse doivent être automatisées via des playbooks.
 
 ### 2. Installation des serveurs
 
-Cette partie se concentre sur la création de playbooks et de rôles Ansible afin de standardiser et automatiser l’installation des serveurs.
+Cette partie se concentre sur la création de playbooks et de rôles Ansible pour standardiser et automatiser le déploiement de serveurs.
 
 ### 3. Déploiement applicatif
 
-Cette dernière partie traite du déploiement applicatif sur une infrastructure déjà en place, avec pour objectif :
+Cette dernière partie traite du déploiement applicatif sur une infra déjà en place, ayant comme objectifs de :
 
 * déployer automatiquement une nouvelle version ;
 * réduire les risques humains ;
 * fiabiliser les mises en production.
 
-***
+## Mise en place du lab
 
-## Mise en place du lab locale
+Comme indiqué au tuto précédent, on va passer par Multipass pour monter des VM légères rapidement et facilement. Il s'agit d'un gestionnaire léger de machines virtuelles développé par Canonical. Il permet la création très rapide de VM, avec faible consommation de ressources, disponible sous Windows, Linux et macOS. Un outil fort pratique que je vous recommande pour déployer instant des VM rapidement !
 
-On va passer par Multipass pour monter des VM légères rapidement et facilement. Il s'agit d'un un gestionnaire léger de machines virtuelles developéés par Canonical. Il permet la création très rapide de VM, avec faible consommation de ressources sans GUI, disponible sous Windows, Linux et macOS.
-
-On créé les machines avec les commandes suivantes :
+Une fois Multipass installé, on créé les machines avec les commandes suivantes :
 
 ```bash
 multipass launch 22.04 -n ansible-main -c 2 -m 1G
@@ -60,7 +56,7 @@ multipass launch 22.04 -n web-server-2 -c 1 -m 1G
 multipass launch 22.04 -n lb-server -c 1 -m 1G
 ```
 
-**Note : la MV "lb-server" servira pour plus tard pour du load balancing ;)**
+**Note : la VM "lb-server" servira pour plus tard pour du load balancing ;)**
 
 Je me suis heurté à un soucis sur ma VM Ubuntu avec Multipass dessus, qui attribue les adresses IP via DHCP. Ce qui fait que les IP changent régulièrement (donc pas d'IP fixes), et les noms d'hôtes ne sont plus résolus correctement.
 
@@ -98,13 +94,13 @@ EOF
 sudo chmod +x /usr/local/bin/sync-multipass-hosts.sh
 ```
 
-Pour maintenir le fichier hosts à jour, une crontab de la sorte permettra au script est exécuté toutes les cinq minutes :
+Pour maintenir le fichier hosts à jour, on peut faire une crontab de la sorte pour permettre au script est exécuté toutes les cinq minutes :
 
 ```bash
 (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/sync-multipass-hosts.sh > /dev/null 2>&1") | crontab -
 ```
 
-Quand on affiche la liste des VM avec la commande suivante :
+Ainsi les hosts que l'on a ici :
 
 ```
 $ multipass list
@@ -115,7 +111,7 @@ web-server-1      Running   10.3.241.212
 web-server-2      Running   10.3.241.176
 ```
 
-Le fichier `/etc/hosts` devient :
+Se retrouvent dans le fichier `/etc/hosts` suivant :
 
 ```
 # BEGIN MULTIPASS
@@ -127,7 +123,7 @@ Le fichier `/etc/hosts` devient :
 
 ## Préparation des VM pour Ansible
 
-Les VM doivent autoriser la connexion SSH, l'authentification par mot de passe et la connexion du compte root. A éviter bien sûr en prod mais là on est dans un lab locale donc ça va :)
+Les VM doivent autoriser la connexion SSH, l'authentification par mot de passe et la connexion du compte root. À éviter bien sûr en prod mais là on est dans un lab locale donc c'est à des fins de démonstrations 🙂 :
 
 ```bash
 multipass exec web-server-1 -- sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
@@ -139,7 +135,7 @@ multipass exec web-server-1 -- sudo systemctl restart ssh
 
 Même procédure pour les deux autres serveurs "**web-server-2**" et le serveur "**lb-server**" qui servira plus tard pour le load balacing.
 
-Cependant, si ma VM hôte Ubuntu connaît les IP et les hostnames Multipass, le VM `ansible-main`, elle, ne les connaît pas automatiquement. Un second script génère un fichier contenant les adresses IP puis le copie dans la VM :
+Cependant, si ma VM hôte Ubuntu connaît les IP et les hostnames Multipass, ma VM `ansible-main` ne les connaît pas automatiquement. Un second script génère un fichier contenant les adresses IP puis les copie dans la VM :
 
 ```bash
 #!/bin/bash
@@ -172,7 +168,7 @@ rm "$TMP_FILE"
 
 **Note : Ce script ne stabilise pas les IP. Il ne fait que maintenir la résolution des hostnames.**
 
-Puis on se créé un fichier d'inventaire "**inventory.ini**". Bien sûr pas de mot de passe en dur en prod :D :
+Puis on se créé un fichier d'inventaire "**inventory.ini**". Bien sûr pas de mot de passe en dur en prod 🙂 :
 
 ```ini
 [web]
@@ -189,7 +185,7 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ansible_python_interpreter=/usr/bin/python3.10
 ```
 
-Puis sur la VM "**ansible-main**" on installe python3-pip + ansible + ajout dans le PATH :
+Puis sur la VM "**ansible-main**" on installe **python3-pip** + **ansible** + ajout dans le PATH :
 
 ```bash
 export PATH=$PATH:~/.local/bin
@@ -212,7 +208,7 @@ to use the 'ssh' connection type with passwords
 you must install the sshpass program
 ```
 
-D'où :
+On règle ça + update pour la forme  :
 
 ```bash
 sudo apt update
@@ -222,13 +218,13 @@ sudo apt install -y sshpass
 
 ## Vérification du fonctionnement
 
-Commande :
+On ping tout les hosts qui se trouvent dans **hosts.ini** :
 
 ```bash
 ansible -m ping -i hosts.ini all
 ```
 
-Résultat attendu :
+On a donc en sortie 😉 :
 
 ```
 web-server-1 | SUCCESS

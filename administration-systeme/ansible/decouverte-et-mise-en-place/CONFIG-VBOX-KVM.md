@@ -1,40 +1,34 @@
 ---
-description: On va s'occupe rici
+description: >-
+  Mise en place d'un lab avec VM Multipass KVM hosted > une VM Ubuntu >
+  VirtualBox > Windows 11.
 ---
 
-# Configuration des VM Multipass
+# Mise en place du lab
 
-On commence déjà par arrêter complètement la VM dans Ubuntu :
+J'avais une VM Ubuntu sur VirtualBox de déjà installé sur mon PC. Il faut d'abord l'arrêter complètement :
 
 ```bash
 sudo poweroff
 ```
 
-### Activer la virtualisation imbriquée
-
-Ouvrir **PowerShell administrateur**.
-
-Se placer où tu veux, puis :
+Tout d'abord il est nécessaire d'activer la virtualisation imbriquée. Cette étape est nécessaire puisque l'on va lancer des VM Multipass dans une VM Ubuntu. On ouvre donc un **PowerShell** en administrateur, puis on se rend dans le répertoire d'installation de VBox où se trouve les binaires :
 
 ```powershell
 cd "C:\Program Files\Oracle\VirtualBox"
 ```
 
-Activer Nested VT-x :
+On active **Nested VT-x** :
 
 ```powershell
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nested-hw-virt on
 ```
 
-Activer Nested Paging :
+Et **Nested Paging** :
 
 ```powershell
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nestedpaging on
 ```
-
-***
-
-### Vérifier la configuration
 
 ```powershell
 .\VBoxManage.exe showvminfo "Ubuntu-JPMM-CLONADO" | Select-String "Nested VT-x","Nested Paging","Hardware Virtualization"
@@ -48,12 +42,6 @@ Nested Paging:      enabled
 Hardware Virtualization: enabled
 ```
 
-***
-
-## 2) Configuration CPU/RAM VirtualBox
-
-Dans VirtualBox :
-
 ```
 Ubuntu-JPMM-CLONADO
  └── Configuration
@@ -62,49 +50,39 @@ Ubuntu-JPMM-CLONADO
            └── Processeur : 2 CPU
 ```
 
-Options :
+Puis activer les options suivante :
 
 ```
 [x] Activer VT-x/AMD-V
 [x] Pagination imbriquée
 ```
 
-***
-
-## 3) Démarrer Ubuntu et vérifier KVM
-
-Dans Ubuntu :
-
-Vérifier le module :
+On démarre ensuite la VM de Ubuntu, puis on vérifie le module kvm qui doit être activé pour transformer Linux en hyperviseur et ainsi exécuter Multipass :
 
 ```bash
 lsmod | grep kvm
 ```
 
-Tu dois voir :
+On y aperçoit :
 
 ```
 kvm
 irqbypass
 ```
 
-***
-
-Vérifier que KVM est exposé :
+Puis on vérifie que KVM est exposé :
 
 ```bash
 ls -l /dev/kvm
 ```
 
-Résultat attendu :
+Ce qui est bien le cas :
 
 ```
 crw-rw----+ 1 root kvm ... /dev/kvm
 ```
 
-***
-
-Tester :
+On peut aussi tester avec cpu-checker par exemple pour voir si on obtient une sortie avec marqué "**kvm-ok**" dedans &#x20;
 
 ```bash
 sudo apt update
@@ -119,27 +97,15 @@ INFO: /dev/kvm exists
 KVM acceleration can be used
 ```
 
-***
-
-## 4) Installer Multipass dans Ubuntu
-
-Si besoin :
+On peut maintenant installer Multipass et déployer nos VM :
 
 ```bash
 sudo snap install multipass
 ```
 
-Tester :
-
 ```bash
 multipass version
 ```
-
-***
-
-## 5) Créer le lab
-
-### VM Ansible
 
 ```bash
 multipass launch 22.04 \
@@ -148,32 +114,12 @@ multipass launch 22.04 \
 -m 1G
 ```
 
-Vérifier :
-
-```bash
-multipass info ansible-main
-```
-
-Entrer dedans :
-
-```bash
-multipass shell ansible-main
-```
-
-***
-
-### VM Web 1
-
 ```bash
 multipass launch 22.04 \
 -n web-server-1 \
 -c 1 \
 -m 1G
 ```
-
-***
-
-### VM Web 2
 
 ```bash
 multipass launch 22.04 \
@@ -182,9 +128,7 @@ multipass launch 22.04 \
 -m 1G
 ```
 
-***
-
-## 6) Vérifier le réseau
+On vérifie ensuite la liste des VM pour voir si elles obtiennent une IP et sont bien lancées :
 
 ```bash
 multipass list
@@ -199,97 +143,51 @@ web-server-1    Running    10.3.241.50
 web-server-2    Running    10.3.241.60
 ```
 
-Tester :
+### Note : si Multipass casse après un crash
 
-```bash
-ping 10.3.241.40
-```
-
-***
-
-## 7) Si Multipass casse après un crash
-
-Nettoyage :
+Nettoyer toutes les VM :
 
 ```bash
 multipass delete --all
 multipass purge
 ```
 
-Puis vérifier :
+Puis vérifier que tout est partie :
 
 ```bash
 multipass list
 ```
 
-***
-
-## 8) Si tu retombes sur cette erreur
-
-### Erreur :
+Si on tombe sur cette erreur :
 
 ```
 launch failed:
 KVM support is not enabled on this machine
 ```
 
-Cause :
-
-Nested VT-x désactivé.
+Cela vient du fait que la pagination : Nested VT-x est parfois désactivé.
 
 Vérifier depuis Windows :
 
 ```powershell
-.\VBoxManage.exe showvminfo "Ubuntu-JPMM-CLONADO" | Select-String "Nested"
+.\VBoxManage.exe showvminfo "NOM_VM_VBOX" | Select-String "Nested"
 ```
 
-Si tu vois :
+Si on vois :
 
 ```
 Nested VT-x/AMD-V: disabled
 Nested Paging: disabled
 ```
 
-refaire :
+Refaire comme plus haut :
 
 ```powershell
-.\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nested-hw-virt on
-.\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nestedpaging on
+.\VBoxManage.exe modifyvm "NOM_VM_VBOX" --nested-hw-virt on
+.\VBoxManage.exe modifyvm "NOM_VM_VBOX" --nestedpaging on
 ```
 
-***
-
-## 9) Le piège qu'on a rencontré
-
-Au début on avait :
-
-```
-Nested VT-x: enabled
-Nested Paging: enabled
-```
-
-mais VirtualBox crashait :
-
-```
-Guru Meditation
-VERR_PGM_MAPPING_IPE
-```
-
-Puis on a désactivé trop loin :
-
-```
-Nested VT-x: disabled
-Nested Paging: disabled
-```
-
-Résultat :
-
-```
-Multipass:
-KVM support is not enabled
-```
-
-La bonne configuration finale est :
+La bonne configuration finale doit être :
 
 ```
 VirtualBox
@@ -298,36 +196,4 @@ VirtualBox
  └── Nested Paging       ON
 ```
 
-***
-
-## Commandes de diagnostic utiles à garder
-
-#### Windows PowerShell
-
-```powershell
-VBoxManage showvminfo "Ubuntu-JPMM-CLONADO"
-```
-
-ou :
-
-```powershell
-VBoxManage --version
-```
-
-***
-
-#### Ubuntu
-
-```bash
-lsmod | grep kvm
-
-ls -l /dev/kvm
-
-kvm-ok
-
-multipass list
-```
-
-***
-
-On maintenant un **mini cluster Ansible de labo dans une VM VirtualBox**, avec KVM accéléré au lieu d'une émulation lente. C'était le bon chemin, le problème était juste la couche de virtualisation imbriquée.
+On a maintenant un **mini cluster Ansible de labo dans une VM VirtualBox**, avec KVM accéléré au lieu d'une émulation lente. C'est le bon chemin, avec toutefois les paramètres de couche de virtualisation imbriquée à vérifier.

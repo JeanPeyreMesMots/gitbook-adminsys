@@ -11,7 +11,7 @@
     * [3 - Hardening du serveur](administration-systeme/active-directory/decouverte-et-mise-en-place/3-hardening-du-serveur.md)
 * [☁️ Ansible](administration-systeme/ansible/README.md)
   * [☁️ Découverte et mise en place](administration-systeme/ansible/decouverte-et-mise-en-place/README.md)
-    * [Configuration des VM Multipass](administration-systeme/ansible/decouverte-et-mise-en-place/CONFIG-VBOX-KVM.md)
+    * [Mise en place du lab](administration-systeme/ansible/decouverte-et-mise-en-place/CONFIG-VBOX-KVM.md)
     * [1 - Mise en place de l'environnement](administration-systeme/ansible/decouverte-et-mise-en-place/day-1-mise-en-place-de-lenvironnement.md)
     * [2 - Gestion de parc, modules, playbooks & rôles](administration-systeme/ansible/decouverte-et-mise-en-place/day-2-gestion-de-parc-modules-playbooks-et-roles.md)
     * [3 - Éliminer la peur de déploiement](administration-systeme/ansible/decouverte-et-mise-en-place/day-3-eliminer-la-peur-du-deploiement.md)

@@ -2,9 +2,13 @@
 
 #### VPC (Virtual Private Cloud)
 
-Un VPC est un réseau privé virtuel : privé car isolé, virtuel car il coexiste avec ceux de tous les autres clients AWS sur la même infrastructure physique. Un VPC est découpé en **subnets**, eux-mêmes rattachés à des **zones de disponibilité** (Availability Zones), qui correspondent chacune à un ou plusieurs data centers d'une région donnée (ex. `eu-west-3a`, `eu-west-3b`, `eu-west-3c`).
+Un VPC est un réseau **privé virtuel** : **privé** car isolé, **virtuel** car il coexiste avec ceux de tous les autres clients AWS. Un VPC est découpé en **subnets**, eux-mêmes rattachés à des **zones de disponibilité** (Availability Zones, abrégé "**AZ**"), qui correspondent à un ou plusieurs data centers d'une région donnée (ex. `eu-west-3a`, `eu-west-3b`, `eu-west-3c`).
 
-Une **région** regroupe plusieurs zones de disponibilité, réparties sur différents data centers. Deux VPC sont totalement isolés l'un de l'autre : un VPC de développement n'affecte en rien un VPC de production. On distingue deux types de subnets : - **subnet public** : nécessaire pour tout ce qui doit être accessible depuis Internet, par exemple un serveur web ; - **subnet privé** : non accessible directement depuis Internet, par exemple une base de données.
+Une **région** regroupe **AZ**, réparties sur différents data centers. Deux VPC sont totalement isolés les uns des autres : un VPC de développement n'affecte en rien un VPC de production. On distingue deux types de subnets :&#x20;
+
+\- les **subnet public** : doivent être accessible depuis Internet, comme un serveur web
+
+\- les **subnet privé** : ne doivent pas être accessible depuis Internet, par exemple une base de données.
 
 Il est possible de configurer le firewall pour qu'une application accède à des ressources situées dans un subnet privé, sans exposer ce subnet directement sur Internet.
 
@@ -12,15 +16,15 @@ Il est possible de configurer le firewall pour qu'une application accède à des
 
 #### EC2 (Elastic Compute Cloud)
 
-EC2 est utile pour tout ce qui n'existe pas déjà "**as a service**" chez AWS : une application, un conteneur, un serveur applicatif (par exemple en Python), etc. À l'inverse, pour des besoins déjà couverts par un service managé (comme une base de données), d'autres services AWS dédiés sont généralement préférables à EC2.
+**EC2** est utile pour tout ce qui n'existe pas déjà "**as a service**" chez AWS, comme une application, un conteneur, un serveur applicatif Python, etc. D'autres services AWS dédiés sont généralement préférables à EC2, à l'inverse, pour des besoins déjà couverts par un service managé (comme une base de données).
 
-EC2 repose sur le principe du "**stateless**" : Si une machine pose problème, on la supprime et on la recrée plutôt que de la réparer. Cette philosophie, bien que déroutante au premier abord, permet une infrastructure entièrement automatisée et un déploiement beaucoup plus rapide.
+EC2 repose sur le principe du "**stateless**" : Si une machine pose problème, on la supprime et on la recrée plutôt que de la réparer. Cette philosophie permet une infrastructure entièrement automatisée, reproductible, et permet un déploiement plus rapide.
 
 #### Images (AMI : Amazon Machine Image)
 
-Une AMI est un snapshot d'une machine, comparable à une image Docker : parfois officielles (par exemple Ubuntu) dont la maintenance est assurée par l'éditeur, prêtes à être lancées immédiatement.
+Une **AMI** est un snapshot d'une machine. Certaines sont parfois officielles (par ex. Ubuntu) avec sa maintenance assurée par l'éditeur, prêtes à être lancées immédiatement.
 
-Il est également possible d'utiliser des images personnalisées ou d'en créer une à partir de rien. Cela permet par exemple de migrer une machine existante vers le cloud, bit à bit. Sur le Marketplace AWS, le coût de certaines images est partagé entre l'éditeur de l'image et l'utilisateur final.
+Il est également possible d'utiliser des images personnalisées ou d'en créer une à partir de rien. Cela permet par exemple de migrer une machine existante vers le cloud. Sur le Marketplace AWS, le coût de certaines AMI se partage entre l'éditeur et l'utilisateur final.
 
 #### Instances
 

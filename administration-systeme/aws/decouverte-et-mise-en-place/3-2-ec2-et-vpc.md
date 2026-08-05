@@ -1,15 +1,13 @@
 # 3.2 - EC2 & VPC (Pt. 2)
 
-## Résumé rapide
+### Résumé rapide
 
-Exercice pratique consistant à créer une instance EC2, y déployer une petite application web sur un port personnalisé, en faire une image AMI custom, puis relancer une instance à partir de cette AMI — le tout entièrement en ligne de commande avec l'AWS CLI. Passage ensuite à une approche plus générique via un script `userdata`, qui permet d'appliquer la même configuration à n'importe quelle AMI de base, sans avoir à créer une image custom à chaque fois.
+L'exercice suivant consistera à créer une instance **EC2**, y déployer une petite appli web sur un port personnalisé, en faire une image AMI custom, puis relancer une instance à partir de cette même AMI. Le tout entièrement en ligne de commande avec l'AWS CLI, car c'est plus rapide et pratique. On y appliquera ensuite un `userdata`, pour disposer d'une configuration similaire à n'importe quelle AMI de base.
 
 ### AMI custom vs userdata : deux approches complémentaires
 
 * Une **AMI custom** embarque directement tout ce qui est nécessaire : le code de l'application, le service déjà configuré pour démarrer automatiquement, et le port applicatif déjà accessible. Elle est rapide à démarrer, mais doit être régénérée à chaque changement de configuration.
-* Un script **userdata** permet, à l'inverse, d'appliquer la même configuration à une AMI générique (par exemple une image Ubuntu standard) au moment du démarrage de l'instance, ce qui la rend plus flexible et plus facile à maintenir, au prix d'un temps de démarrage un peu plus long.
-
-***
+* Un script **userdata** permet, à l'inverse, d'appliquer la même configuration à une AMI générique (par exemple une image Ubuntu standard) au moment du démarrage de l'instance, ce qui la rend plus flexible et plus facile à maintenir, au prix d'un temps de démarrage un peu plus long. On va donc privilégier cette approche.
 
 ### 1. Lister et supprimer les instances existantes
 
@@ -19,7 +17,7 @@ Avant de créer une nouvelle instance, les instances existantes sont listées :
 aws ec2 describe-instances --profile myProfile | head -n 100
 ```
 
-Un extrait de la sortie permet de retrouver, entre autres, l'ID d'instance, le type d'instance, le security group associé, ainsi que les tags :
+Un extrait de la sortie permet de retrouver l'ID d'instance, le type d'instance, le security group associé, ainsi que les tags :
 
 ```bash
 $ aws ec2 describe-instances --profile myProfile | grep "Instance"
@@ -54,7 +52,7 @@ Une nouvelle instance, nommée `mcflurry-kostan`, doit être créée à partir d
 $ aws --profile myProfile ec2 describe-security-groups
 ```
 
-Extrait pertinent, montrant que le port 8000 est déjà ouvert à tous :
+On peut y voir le port 8000, déjà ouvert à tous :
 
 ```bash
 "VpcId": "vpc-02a9f67924e244fe1",
@@ -96,7 +94,7 @@ $ aws --profile myProfile ec2 describe-subnets \
 +---------------------------+------------------+-------------+-------+
 ```
 
-Le premier subnet de la liste est retenu, ce qui donne la commande de création d'instance suivante (avec la clé SSH `mcflurry-kostan` préalablement créée depuis la console, et son fichier `.pem` importé sur la VM Ubuntu locale) :
+Le premier subnet de la liste est retenu, on créé l'instance suivante avec (avec la clé SSH `mcflurry-kostan` et son fichier `.pem` importé sur la VM Ubuntu locale) :
 
 ```bash
 aws --profile myProfile ec2 run-instances \
@@ -108,7 +106,7 @@ aws --profile myProfile ec2 run-instances \
   --count 1
 ```
 
-Après validation, l'instance apparaît bien dans la liste, à l'état "running" :
+Après validation, l'instance apparaît bien dans la liste, à l'état "**running**" :
 
 ```bash
 $ aws --profile myProfile ec2 describe-instances \
@@ -124,7 +122,7 @@ i-0ba4e0207fc7921c6     None    None    terminated      t3.micro        us-east-
 
 ### 3. Connexion et déploiement de l'application
 
-Connexion SSH à la nouvelle instance, puis clonage du dépôt :
+On peut maintenant se connecter en SSH à la nouvelle instance, puis cloner le dépôt :
 
 ```bash
 $ ssh -i mcflurry-kostan.pem ubuntu@54.164.35.204
@@ -137,21 +135,19 @@ remote: Counting objects: 100% (131/131), done.
 remote: Compressing objects: 100% (116/116), done.
 ```
 
-### 4. Blocage Cloudflare et contournement par une page statique
+### 4. Blocage Cloudflare
 
 L'application rencontre une erreur 403 lors de ses appels API. Après investigation, la cause n'est pas un problème de token d'authentification, mais un blocage **Cloudflare** : le site source (SkipTheDishes) applique une protection anti-bot qui rejette les requêtes ne provenant pas d'un navigateur réel. Le token utilisé par l'application est probablement toujours valide, mais la requête est bloquée par Cloudflare avant même d'atteindre l'API.
 
-Face à ce blocage, une simple page "hello world" en HTML est exposée sur le port 1234 via Nginx, en remplacement de l'application complète :
+Face à ce blocage, je change la page voulue en simple "**hello world**" en HTML exposée sur le port 1234 via Nginx, en remplacement de l'application complète :
 
 ![](../../../.gitbook/assets/Pasted_image_20260608195746.png)
 
-Une règle de pare-feu correspondante est configurée sur AWS :
+Avec le copain Claude en backup toutefois :P Une règle de pare-feu correspondante est configurée sur AWS :
 
 ![](../../../.gitbook/assets/Pasted_image_20260609174854.png)
 
-> Une commande de création d'instance à partir d'une AMI a été notée à ce stade, mais son `--subnet-id` est resté vide dans les notes d'origine ; elle n'a donc pas été reprise comme étape à part entière ici (voir "Points à vérifier").
-
-L'instance est finalement lancée avec Nginx configuré pour servir la page sur le port 1234, testée d'abord en local puis via l'IP publique :
+L'instance est donc lancée avec Nginx tapant sur le port 1234, testée d'abord en local puis via l'IP publique :
 
 ```bash
 ubuntu@ip-172-31-29-20:~/mcflurry$ curl http://localhost:1234
@@ -176,7 +172,7 @@ aws --profile myProfile ec2 describe-instances \
 i-05baafd242242ec4b     172.31.29.20    3.91.185.214    running t3.micro        us-east-1c    None
 ```
 
-L'image est ensuite créée à partir de cette instance :
+Puis on créé l'image à partir de cette même instance
 
 ```bash
 aws --profile myProfile ec2 create-image \
@@ -216,7 +212,7 @@ L'instance ayant servi à créer l'image est d'abord terminée :
 aws --profile myProfile ec2 terminate-instances --instance-ids i-05baafd242242ec4b
 ```
 
-Une nouvelle instance est ensuite créée directement à partir de l'AMI custom, avec la clé SSH pour s'y connecter si besoin :
+Puis on créé une nouvelle instance à partir de l'AMI custom et la clé SSH pour s'y connecter :
 
 ```bash
 aws --profile myProfile ec2 run-instances \
@@ -228,7 +224,7 @@ aws --profile myProfile ec2 run-instances \
   --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=mcflurry-instance}]'
 ```
 
-L'adresse IP de la nouvelle instance est récupérée :
+On voit ainsi bien l'adresse IP de la nouvelle instance :
 
 ```bash
 i-0f662bc75b1c1e4b9     None    None    terminated      t3.micro        us-east-1c
@@ -239,9 +235,9 @@ Le site est bien accessible directement, sans aucune configuration manuelle supp
 
 ![](../../../.gitbook/assets/Pasted_image_20260611182806.png)
 
-### 7. Généralisation avec un script userdata
+### 7. Ajout du script userdata
 
-L'AMI custom fonctionne bien, mais elle doit être régénérée à chaque changement. L'objectif est donc de déplacer toute la configuration dans un script `userdata`, applicable à n'importe quelle AMI générique :
+L'AMI custom fonctionne bien, mais elle doit être régénérée à chaque changement. L'objectif est donc de déplacer toute la configuration dans le script `userdata`:
 
 ```bash
 #!/bin/bash
@@ -266,7 +262,7 @@ nginx -t && systemctl restart nginx
 curl http://localhost:1234 > /home/ubuntu/site-state.html
 ```
 
-Une nouvelle instance est lancée en passant ce script via l'option `--user-data` :
+On créé une nouvelle instance en passant le script via l'option `--user-data` :
 
 ```bash
 aws --profile myProfile ec2 run-instances \
@@ -281,19 +277,19 @@ aws --profile myProfile ec2 run-instances \
 
 ### 8. via le CLI (création du security group inclus)
 
-Création d'un security group dédié depuis zéro :
+On créé un security group dédié depuis zéro :
 
 ```bash
 aws ec2 create-security-group --group-name mcflurry --description "mcflurry"
 ```
 
-Ouverture des ports 22 (SSH) et 1234 (application) :
+Et on ouvre les ports 22 (SSH) et 1234 (applicatif) :
 
 ```bash
 aws ec2 authorize-security-group-ingress --group-id sg-090e568fe9800aed2 \
-  --protocol tcp --port 1234 --cidr 0.0.0.0/0
-aws ec2 authorize-security-group-ingress --group-id sg-090e568fe9800aed2 \
   --protocol tcp --port 22 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id sg-090e568fe9800aed2 \
+  --protocol tcp --port 1234 --cidr 0.0.0.0/0
 ```
 
 > Il n'est pas possible de pinger la machine par défaut, car le protocole ICMP n'est pas ouvert automatiquement, même lorsque d'autres ports le sont. Il faut ajouter explicitement une règle ICMP personnalisée pour autoriser le ping.

@@ -28,75 +28,70 @@ Il est également possible d'utiliser des images personnalisées ou d'en créer 
 
 #### Instances
 
-Une instance correspond à une machine virtuelle EC2. Sa taille détermine ses caractéristiques (nombre de cœurs CPU, quantité de RAM, espace disque, etc.). Deux instances peuvent avoir un nombre de cœurs identique pour un prix identique tout en ayant des quantités de RAM très différentes : le choix du type d'instance doit donc être adapté aux besoins réels de l'application (consommation de RAM, de CPU, etc.).
+Une instance correspond à une machine virtuelle EC2. Le prix peut différer selon les caractéristiques. Par exemple, deux instances peuvent avoir le même nombre de cœurs avec de la RAM différente, le tout pour le même prix. Le choix doit donc être adapté aux besoins réels de l'application (conso de RAM, CPU, etc.).
 
-Il existe également des **instances "burstables"** , dont les performances sont limitées en temps normal mais peuvent être dépassées temporairement.
+Il existe également des instances dites **"burstables"**, dont les performances sont limitées en temps normal mais peuvent être dépassées temporairement.
 
-Exemple : le CPU peut être poussé à 100 % pendant une portion limitée du temps. Si l'instance consomme moins que sa capacité nominale pendant un certain temps, elle accumule des crédits qui lui permettent ensuite de dépasser ses limites habituelles plus tard.
+Exemple : le CPU peut être poussé à 100 % pendant une limite du temps. Si l'instance utilise moins de sa capacité nominale pendant un temps, elle accumule des crédits lui permettant ensuite de dépasser ses limites plus tard.
 
 > Un site très utile pour comparer l'ensemble des types d'instances disponibles en fonction des besoins à couvrir : [instances.vantage.sh](https://instances.vantage.sh/)
 
 #### Volumes EBS (Elastic Block Store)
 
-Certaines instances disposent d'un stockage local persistant, d'autres non. Pour découpler le stockage du cycle de vie de l'instance, AWS propose EBS (Elastic Block Store), qui permet de déplacer des volumes de stockage d'une instance à une autre.
+Certaines instances ont stockage local persistant, d'autres non. Pour pallier à cela et prolonger le cycle de vie de l'instance, AWS propose **EBS (Elastic Block Store)**, qui permet de déplacer des volumes de stockage d'une instance à l'autre.
 
-Les volumes EBS reposent sur du SSD, facturé selon les besoins : certaines offres sont optimisées pour la capacité de stockage, d'autres pour les IOPS. Un volume EBS est détachable et peut être rattaché à une autre instance.
+Les volumes EBS se basent sur du SSD, facturé au besoin des capacités de stockage, d'autres pour les IOPS. Un volume EBS est détachable et rattachable à une autre instance.
 
 > Attention : le volume est facturé dans son intégralité, même si l'espace alloué n'est pas entièrement utilisé.
 
-#### Security group
+#### Security group (SG)
 
-Un security group agit comme un pare-feu partagé par un groupe d'instances qui appliquent les mêmes règles de trafic entrant et sortant. Il n'est pas défini au niveau de l'instance elle-même, mais au niveau du réseau. Sa configuration est entièrement personnalisable selon les besoins, et son usage est gratuit (certaines limites sont toutefois imposés).
+Un **security group** est comme un pare-feu partagé par un groupe d'instances. Il agit au niveau réseau, et non au niveau de l'instance elle-même. La conf applicable dessus est évidemment changeables, et son usage est gratuit (avec des limites imposés).
 
-Il (cross-AZ) pour couvrir plusieurs zones tout en restant limité à un seul VPC (intra-VPC) : des instances situées dans des zones de disponibilité différentes peuvent donc appartenir au même security group.
+Il est cross-AZ pour couvrir plusieurs zones tout en restant limité à un seul VPC (intra-VPC) : des instances dans d'autres AZ peuvent appartenir au même security group.
 
-Les règles d'un security group peuvent autoriser le trafic soit via une plage d'adresses IP (CIDR), soit via un autre security group. Il est généralement recommandé de préférer l'autorisation par security group plutôt que par adresse IP.
+Les règles d'un **SG** peuvent s'autoriser soit via une plage d'adresses IP (CIDR), soit via un autre **SG**, ce qui est conseillé.
 
-\*\*Exemple : \*\*, le security group d'une base de données peut n'autoriser le port 3306 qu'aux machines appartenant au security group des serveurs web, ce qui est plus robuste et plus maintenable qu'une liste d'adresses IP fixes.
+Exemple : le SG d'une base de données peut n'autoriser le port 3306 qu'aux machines appartenant au SG des serveurs web, ce qui est plus fiable comme approche qu'une liste d'adresses IP fixes.
 
 #### Elastic IP
 
-Une Elastic IP permet de fixer une adresse IP publique pour une machine, afin d'éviter qu'elle ne change à chaque redémarrage. Ce service devient payant si l'adresse IP n'est pas activement utilisée, ce qui vise à décourager la réservation inutile d'adresses IPv4. De façon plus générale, toutes les adresses IPv4 sur AWS sont désormais payantes.
+Une Elastic IP permet d'avoir IP publique pour une machine, afin d'éviter qu'elle change à chaque reboot. Ce service devient payant si l'IP n'est pas utilisée, il vise en effet à décourager la réservation inutile d'adresses dans le pool IPv4 mondiale. Aujourd'hui, quasiment toutes les IPv4 sur AWS sont désormais payantes.
 
 #### Userdata
 
-Il s'agit d'un script bash exécuté automatiquement au démarrage de la machine, ce qui est très utile pour automatiser sa configuration initiale. Ce script est souvent encodé en base64, en raison de limites de taille sur le texte transmis, et s'exécute avec les droits roots.
+Il s'agit d'un script bash exécuté automatiquement au démarrage de la machine, ce qui est très utile pour automatiser une config initiale. À cause de la limite de taille sur le texte, ce script est souvent encodé en Base64, et s'exécute avec les droits roots.
 
 #### Key pair
 
-Une key pair correspond à une paire de clés SSH. Sur AWS, il est possible d'importer sa propre clé publique, qui sera automatiquement injectée dans la machine au démarrage, sur l'utilisateur par défaut de l'image utilisée. Ce mécanisme fonctionne également pour les machines Windows.
+Il s'agit ici des pairs de clés SSH. On peut importer sa clé publique, qui sera ensuite injectée dans la machine au démarrage, avec le user par défaut cette dernière.
 
 #### Snapshot EBS
 
-Un snapshot peut être créé à tout moment pour figer l'état d'un volume EBS à un instant T. Les volumes EBS sont rattachés aux instances EC2.
-
-* Un **snapshot** est une copie de l'état d'un volume à un moment donné.
-* Une **AMI** peut être vue comme un snapshot sauvegardé sous forme d'image de machine complète, à partir de laquelle une nouvelle instance peut être démarrée.
+Un snapshot visa figer l'état d'un volume EBS à un instant T. Les volumes EBS sont rattachés aux instances EC2. Les snapshots sont sauvegardés en tant qu'**AMI** qui sont des images, à partir desquelles de nouvelles instances peuvent être démarrées.
 
 #### ENI (Elastic Network Interface)
 
-Une ENI est une interface réseau qui peut être attachée ou détachée d'une instance. Une même instance peut disposer de plusieurs interfaces réseau, ce qui permet notamment d'augmenter la bande passante disponible, sans limite particulière côté nombre d'interfaces.
+Une **ENI** est une interface réseau qui peut être attachée/détachée d'une instance. Une instance peut avoir plusieurs interfaces réseau, pour augmenter la bande passante, sans limite du nombre d'interfaces.
 
-Ce mécanisme permet également une forme de "**failover**" basique : une adresse IP est rattachée à une carte réseau donnée, et en cas de problème sur cette carte, il est possible de basculer vers une autre. Cela implique par contre un downtime pendant la bascule.
+Cela offre une forme de "**failover**" : une adresse IP est rattachée à une carte réseau donnée, en cas de problème sur cette carte, il est possible de basculer vers une autre. Cela implique par contre un downtime pendant la bascule.
 
 #### Les instances spot
 
-* Les **instances spot** correspondent à la capacité de calcul qu'AWS n'utilise pas à un instant donné et qu'il propose donc à prix réduit. En contrepartie, AWS peut reprendre ces instances à tout moment dès qu'il en a besoin.
-* Exemple : sur un besoin de 10 serveurs web, il est possible de n'utiliser que 5 instances spot pour réduire les coûts ; lorsqu'AWS reprend une instance spot, il ne facture pas la dernière heure d'utilisation. Le taux de reprise constaté est de l'ordre de 5 % en fin de mois, ce qui reste relativement rare sur un grand nombre d'instances.
-
-***
+* Les **instances spot** correspondent à la capacité de calcul qu'AWS n'utilise pas à un instant donné et qu'il propose donc à prix réduit. Revers de la médaille, AWS peut reprendre ces instances à tout moment dès qu'il en a besoin !
+* Exemple : sur un besoin de 10 serveurs web, il est possible de n'utiliser que 5 instances spot pour réduire les coûts. Lorsqu'AWS reprend une instance spot, il ne facture pas la dernière heure d'utilisation. Le taux de reprise constaté est de l'ordre de 5 % en fin de mois, ce qui reste relativement rare sur un grand nombre d'instances.
 
 ### Procédure : mise en pratique et exercice
 
 #### 1. Lancement d'une instance EC2
 
-Une instance est lancée en cohérence avec la stack technique visée. Ici, une AMI Ubuntu est choisie :
+Une instance est lancée sur une AMI Ubuntu :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605175138.png)
 
 Le type d'instance sélectionné est `t2.micro`, afin d'utiliser pleinement les ressources CPU disponibles sur cette offre.
 
-Création d'une key pair pour la connexion SSH :
+On créé une key pair pour la connexion SSH :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605175417.png)
 
@@ -110,7 +105,7 @@ Elle est bien présente dans le subnet attendu :
 
 #### 2. Connexion SSH à l'instance
 
-La connexion se fait avec la clé `.pem` générée précédemment, sur l'utilisateur par défaut `ubuntu` (cet utilisateur peut varier selon l'AMI utilisée) :
+La connexion se fait avec la clé `.pem` générée précédemment, sur l'utilisateur par défaut `ubuntu` (qui peut changer selon l'AMI utilisée) :
 
 ```bash
 ssh ubuntu@52.207.223.54 -i cocadmin2.pem 

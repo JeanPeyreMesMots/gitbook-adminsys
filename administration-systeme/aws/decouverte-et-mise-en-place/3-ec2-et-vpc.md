@@ -128,7 +128,7 @@ ubuntu@ip-172-31-34-9:~$
 
 #### 3. Ouverture d'un port applicatif dans le security group
 
-Pour rendre l'application accessible sur le port 8000, il faut d'abord identifier le security group associé à l'instance :
+Pour rendre l'application accessible sur le port 8000, il faut d'abord identifier le SG associé à l'instance :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605181004.png)
 
@@ -136,15 +136,15 @@ Le security group concerné est ici `launch-wizard-1` :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605182010.png)
 
-Les règles de firewall entrantes/sortantes sont ensuite éditées pour autoriser ce port.
+Les règles de firewall sont ensuite éditées pour autoriser ce port.
 
-> Il est préférable, en bonne pratique, d'autoriser l'accès à d'autres security groups plutôt qu'à une plage d'adresses CIDR ouverte à tous. Dans le cadre de cet exercice, l'approche la plus simple et la plus globale a été retenue, à savoir l'ouverture via CIDR pour l'ensemble des adresses :
+> Bien qu'il soit préférable d'autoriser l'accès sur des SG plutôt qu'à une plage d'IPs, dans le cadre de cet exercice, l'approche la plus simple demeure l'ouverture via CIDR pour l'ensemble des adresses :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605182505.png)
 
 #### 4. Déploiement de l'application sur l'instance
 
-Le dépôt de l'application (projet "mcflurry") est cloné sur la VM :
+Le dépôt de l'application (projet "**mcflurry**") est cloné sur la VM :
 
 ```bash
 ubuntu@ip-172-31-34-9:~$ git clone https://github.com/ttwthomas/mcflurry
@@ -195,9 +195,9 @@ Traceback (most recent call last):
 KeyError: 'data'
 ```
 
-> Cette erreur provient d'un token d'API codé en dur dans le code, datant vraisemblablement de 2023 (date de la formation) et n'étant plus valide aujourd'hui suite à des changements côté API externe.
->
-> À défaut de résoudre ce point dans l'immédiat, j'ai choisie une alternative où j'expose une simple page statique via Nginx ou Apache, pour faire office de POC, afin de vérifier que l'IP publique et le port exposé répondent correctement.
+Cette erreur provient d'une clé d'API codé en dur dans le code, datant de 2023 (date de la formation) et n'étant plus valide aujourd'hui.
+
+À défaut de résoudre ce point et pouvoir avancer sans être bloqué, j'ai choisi une soluce plus simple où j'expose une simple page via Nginx ou Apache, pour faire office de POC, pour voir si l'IP publique et le port exposé répondent.
 
 #### 5. Création d'un snapshot et d'une AMI
 
@@ -205,14 +205,14 @@ Un snapshot est créé, puis une image AMI, pour illustrer le mécanisme de sauv
 
 ![](../../../.gitbook/assets/Pasted_image_20260605185023.png)
 
-Interface de création d'une image :
+On créé ensuite l'image ici :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605185342.png)
 
-Le snapshot apparaît ensuite dans la liste correspondante :
+Avec le snapshot apparaît ensuite dans la liste correspondante :
 
 ![](../../../.gitbook/assets/Pasted_image_20260605185513.png)
 
-Il devient alors possible de démarrer de nouvelles instances directement à partir de ce snapshot. Une AMI créée à partir d'une machine déjà configurée permet de s'affranchir de toute la phase d'installation et de configuration habituellement nécessaire au démarrage d'une nouvelle instance.
+Il devient alors possible de démarrer de nouvelles instances directement à partir de ce snapshot. Une AMI créée à partir d'une machine déjà configurée permet de skip toute la phase de configuration nécessaire au boot d'une nouvelle instance.
 
-> Piste d'Infrastructure as Code (IaC) mentionnée : Ansible peut être utilisé pour créer directement une image, et l'outil Packer permet, combiné à Ansible, d'automatiser entièrement la création d'une instance AWS, d'une AMI, d'une image et d'un snapshot.
+> Note d'Infrastructure as Code (IaC) : Ansible peut être utilisé pour créer directement une image, et l'outil Packer permet, combiné à Ansible, d'automatiser entièrement la création d'une instance AWS, d'une AMI, d'une image et d'un snapshot.

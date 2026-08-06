@@ -9,12 +9,11 @@ description: Ma page de présentation
 Bonjour à tous ! **JeanPeyreMesMots** (mon pseudo ; vrai nom Kostan), 25 ans, technicien informatique et aspirant sysadmin qui aime n'importe quoi qui a un moteur et 4 roues 😉 Les domaines de l'IT que j'adore le plus sont :
 
 * l'Administration Système
-* l'OSINT
-* le Cloud
-* le Pentest Web
-* les attaques Linux
-* la Sécurité Mobile
-
+* OSINT
+* Cybersécurité
+* Cloud
+* Pentest Web
+* Sécurité Mobile
 * Coding : Bash, Python, Powershell
 
 Vous trouverez ici tous mes articles, notes et recherches réalisés dans le cadre de ma reconversion professionnelle. Tout est en français pour l'instant, mais sera bientôt traduit, et d'autres contenus sont sur le point d'être ajoutés 😉

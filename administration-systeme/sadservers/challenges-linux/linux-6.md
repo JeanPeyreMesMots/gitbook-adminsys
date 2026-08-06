@@ -1,7 +1,10 @@
-﻿## Paris
+# 6 - Paris, Manado & Moyogalpa
+
+### Paris
+
 Un peu de hacking, comme au bon vieux temps :D
 
-### Reconnaissance
+#### Reconnaissance
 
 Process en cours :
 
@@ -22,7 +25,7 @@ Unauthorized
 
 Réponse 200 mais contenu "Unauthorized" — donc pas une vraie 401, l'appli gère l'auth elle-même dans le corps de la réponse.
 
-### Tentative brute-force sur des creds classiques
+#### Tentative brute-force sur des creds classiques
 
 Petit script bash pour tester une liste de couples login/mdp courants (admin:admin, root:root, guest:guest, etc.) :
 
@@ -40,7 +43,7 @@ done
 
 Aucun succès. Recherche d'exploits connus sur le stack utilisé : rien de concluant non plus.
 
-### La faille : header User-Agent absent
+#### La faille : header User-Agent absent
 
 Idée testée un peu au hasard : retirer complètement le header `User-Agent` de la requête.
 
@@ -53,7 +56,7 @@ Welcome! Password is FDZPmh5AX3oiJt
 
 Bingo — sans User-Agent, l'appli laisse fuiter un mot de passe en clair dans la réponse. Manifestement une vérification de sécurité mal branchée qui dépend (à tort) du User-Agent plutôt que des vraies credentials.
 
-Tentatives de spray le mdp avec différents logins (admin, root, sad, sadservers, guest...) : à chaque fois la même réponse "**Welcome**!" revient, peu importe le login utilisé. 
+Tentatives de spray le mdp avec différents logins (admin, root, sad, sadservers, guest...) : à chaque fois la même réponse "**Welcome**!" revient, peu importe le login utilisé.
 
 Donc ce n'était pas un vrai identifiant de connexion, mais très probablement directement la solution du challenge :
 
@@ -61,10 +64,10 @@ Donc ce n'était pas un vrai identifiant de connexion, mais très probablement d
 echo "FDZPmh5AX3oiJt" > ~/mysolution
 ```
 
-Confirmé :) :
+Confirmé :)
 
-![[Pasted image 20260731221201.png|390]]
-## Manado
+### Manado
+
 _(Note prise rapidement, à détailler plus tard)_
 
 Exercice autour de la commande `sort` et de la compression `xz` :
@@ -91,7 +94,7 @@ xz -9 names_COPY
 # xz: names_COPY: Cannot allocate memory
 ```
 
-Échec — pas assez de mémoire disponible pour ce niveau de compression sur cette machine. Repli sur un niveau intermédiaire :
+Échec, pas assez de mémoire disponible pour ce niveau de compression sur cette machine. Repli sur un niveau intermédiaire :
 
 ```bash
 xz -5 names_COPY
@@ -105,15 +108,16 @@ ll
 cp names_COPY.xz solution/
 ```
 
-## Moyogalpa
+### Moyogalpa
+
 **Contexte (via `/home/README.txt`) :** une application Golang sécurisée par John et Mike, cassée par leurs propres mesures de sécurité. Contraintes à respecter :
 
-- communication uniquement en HTTPS ;
-- accès limité aux seuls fichiers nécessaires (certificats + fichiers statiques) ;
-- rate limiting à 10 requêtes/seconde ;
-- exécution sous utilisateur non-root.
+* communication uniquement en HTTPS ;
+* accès limité aux seuls fichiers nécessaires (certificats + fichiers statiques) ;
+* rate limiting à 10 requêtes/seconde ;
+* exécution sous utilisateur non-root.
 
-### Pourquoi j'ai galéré au début
+#### Pourquoi j'ai galéré au début
 
 L'appli n'était pas lancée à la main (`go run ...`), mais gérée comme service systemd — j'ai mis un moment à réaliser qu'il fallait donc regarder les logs via `journalctl -u webapp` plutôt que chercher un process lancé manuellement.
 
@@ -124,7 +128,7 @@ sudo journalctl -u webapp
 # can not access certificate/key file. sleeping for 10s and will retry
 ```
 
-### Round 1 : permissions sur les certificats
+#### Round 1 : permissions sur les certificats
 
 ```bash
 ll /home/webapp/pki/
@@ -146,7 +150,7 @@ Toujours en échec derrière :
 open /home/webapp/pki/server.pem: permission denied
 ```
 
-### Round 2 : vérifier les certificats eux-mêmes
+#### Round 2 : vérifier les certificats eux-mêmes
 
 Test de validité avec openssl sur chaque fichier :
 
@@ -183,7 +187,7 @@ Donc les fichiers eux-mêmes étaient sains — le souci devait venir d'ailleurs
 sudo chmod -R 755 static-files/
 ```
 
-### Round 3 : propriétaire correct + DNS local
+#### Round 3 : propriétaire correct + DNS local
 
 Après avoir remis les fichiers au bon propriétaire (`webapp:webapp` plutôt qu'`admin`), et cherché la solution en ligne, découverte qu'il fallait enregistrer le certificat CA dans le magasin système pour éviter d'avoir à utiliser `--cacert` à chaque requête :
 
@@ -219,11 +223,11 @@ Logs :
 open /home/webapp/static-files/users.html: permission denied
 ```
 
-### Round 4 : AppArmor, la vraie cause finale
+#### Round 4 : AppArmor, la vraie cause finale
 
 Aucune idée que ça pouvait venir de là — trouvé en cherchant la solution que l'application est confinée par un profil AppArmor (`/etc/apparmor.d/usr.local.bin.webapp`), qui autorisait explicitement l'accès aux certificats mais pas aux fichiers statiques. Le profil :
 
-```text
+```
 /home/webapp/pki/ r,
 /home/webapp/pki/server.pem r,
 /home/webapp/pki/server.crt r,
@@ -232,7 +236,7 @@ Aucune idée que ça pouvait venir de là — trouvé en cherchant la solution q
 
 Ajout des lignes nécessaires :
 
-```text
+```
 /home/webapp/static-files/ r,
 /home/webapp/static-files/* r,
 ```

@@ -1,13 +1,10 @@
-﻿# SadServers – Linux Challenges (2)
+# 2 - Rio de Janeiro, Nuuk, Cairo & Alexandria
 
 ## Rio de Janeiro
-**Découverte de Jenkins.** Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre.
 
-### Contexte
+Il faut aussi débug du Jenkins. Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre ⇒ status en stopped.
 
-Jenkins 2.516.3 refusait de démarrer proprement car il tournait avec une version de Java non recommandée pour cette version (Java 8 au départ, puis Java 25 signalé "not fully supported"). Objectif : basculer Jenkins sur Java 21, déjà installé sur la machine mais pas utilisé par défaut.
-
-### Diagnostic
+Jenkins 2.516.3 refusait de démarrer proprement car il tournait avec une version de Java non recommandée pour cette version (Java 8 au départ, puis Java 25 signalé "not fully supported"). L'objectif est donc de basculer Jenkins sur Java 21, déjà installé sur la machine mais pas utilisé par défaut.
 
 On regarde quelles versions sont utilisées par défaut :
 
@@ -18,15 +15,13 @@ javac -version
 
 `java` pointait sur une vieille version (Java 8) tandis que `javac` pointait sur une version plus récente. Incohérence à corriger.
 
-### Procédure
-
 Sur Ubuntu/Debian, la gestion de plusieurs JVM se fait avec `update-alternatives`. On liste les versions installées :
 
 ```bash
 sudo update-alternatives --config java
 ```
 
-```text
+```
 There are 3 choices for the alternative java (providing /usr/bin/java).
 
   Selection    Path                                         Priority   Status
@@ -49,14 +44,7 @@ sudo update-alternatives --config java
 
 Même manip pour `javac`. Ensuite `java -version` et `javac -version` renvoient bien Java 21.
 
-Vérification de la version Jenkins :
-
-```bash
-jenkins --version
-# 2.516.3
-```
-
-Relance du service :
+On relance le service :
 
 ```bash
 sudo systemctl status jenkins.service
@@ -71,34 +59,36 @@ sudo systemctl start jenkins.service
 Mar 09 18:39:17 i-0899387007d013833 jenkins[4169]: ... Jenkins is fully up and running
 ```
 
-Vérification que le port HTTP (8888) répond :
+Puis on check que le port 8888 répond :
 
 ```bash
 curl -s localhost:8888/login | grep Jenkins | head -n1
 # <title>Sign in - Jenkins</title>...
 ```
 
-Titre "Sign in - Jenkins" confirmé, l'interface web est accessible, challenge résolu.
+On nous renvoi un "**Sign in - Jenkins**", l'interface web est donc accessible. Challenge résolu.
+
 ## Nuuk
-SSHNuke, référence à Matrix :P
+
+Le titre du chall me rappel **SSHNuke**, référence à Matrix :P
 
 **Objectif :** SSH ne fonctionnait pas en local sur la machine, malgré la présence des bonnes clés dans `~/.ssh/authorized_keys`.
 
-Du gâteau — un simple coup d'œil sur le `.ssh` suffit à voir que les permissions sont mauvaises :
+Du gâteau, un simple coup d'œil sur le `.ssh` suffit à voir que les permissions étaient mauvaises :
 
 ```bash
 ll
 # d--------- 2 admin admin 4.0K Oct 21 17:27 .ssh
 ```
 
-Aucune permission sur le dossier. Correction :
+Aucune permission sur le dossier. On corrige :
 
 ```bash
 sudo chmod 755 .ssh/
 # drwxr-xr-x 2 admin admin 4.0K Oct 21 17:27 .ssh
 ```
 
-Test :
+Puis on se connecte en local sur la machine :
 
 ```bash
 ssh 127.0.0.1
@@ -109,8 +99,10 @@ admin@i-0a31a7ab947fad896:~$
 ```
 
 Connexion réussie.
+
 ## Cairo
-**Contexte :** un script de health check critique (`/opt/scripts/health.sh`) est censé tourner toutes les 10 secondes via un timer systemd. Le script :
+
+**Contexte :** un script de health check critique (`/opt/scripts/health.sh`) est censé tourner toutes les 10 secondes via un timer systemd :
 
 ```bash
 #!/bin/bash
@@ -124,18 +116,16 @@ else
 fi
 ```
 
-Celui-là m'a fait tourner en rond un bon moment. Voici le fil complet, échecs compris.
+Comme vous allez le voir, celui-là m'a fait tourner en rond un bon moment.
 
-### Round 1 : curl qui ne répond pas
-
-Test manuel de la commande dans le script :
+En testant manuellement la commande dans le script :
 
 ```bash
 curl http://localhost
 ^C
 ```
 
-Rien. Aucune réponse, obligé de couper avec Ctrl+C. En mode verbose :
+Rien n'arrive, ça reste bloqué à "Trying" :
 
 ```bash
 curl -v http://localhost
@@ -146,10 +136,6 @@ curl -v http://localhost
 *   Trying 127.0.0.1:80...
 ```
 
-Ça reste bloqué à "Trying" — connexion qui ne s'établit jamais.
-
-### Round 2 : nginx a l'air en bonne santé
-
 ```bash
 systemctl status nginx
 ● nginx.service - A high performance web server and a reverse proxy server
@@ -157,23 +143,23 @@ systemctl status nginx
      Main PID: 779 (nginx)
 ```
 
-Service actif, rien d'anormal en apparence. Logs :
+On check les logs :
 
 ```bash
 cat /var/log/nginx/error.log
 2025/11/22 16:01:28 [notice] 1600#1600: using inherited sockets from "5;6;"
 ```
 
-Une seule ligne, un simple "notice", rien qui saute aux yeux. Config testée, syntaxe OK :
+Une seule ligne, un simple "notice", rien qui saute aux yeux. La syntaxe est pourtant bonne :
 
 ```bash
 sudo nginx -t
 # nginx: configuration file /etc/nginx/nginx.conf test is successful
 ```
 
-Rien d'anormal dans la conf non plus. À ce stade, je pensais que ça devait être un faux problème — spoiler : non, c'est le début d'un vrai rabbit hole.
+Rien d'anormal dans la conf non plus. Serait-ce le début d'un rabbit hole ?
 
-### Round 3 : tenter de relancer nginx directement
+
 
 ```bash
 sudo nginx
@@ -182,7 +168,7 @@ nginx: [emerg] bind() to [::]:80 failed (98: Address already in use)
 nginx: [emerg] still could not bind()
 ```
 
-Port 80 déjà utilisé — mais par quoi ? Vérification :
+Problème de bind, donc avec les ports. Le port 80 est déjà utilisé mais par quoi ?
 
 ```bash
 sudo ss -tuln | grep :80
@@ -191,7 +177,7 @@ tcp   LISTEN 0      511               [::]:80            [::]:*
 tcp   LISTEN 0      4096                 *:8080             *:*
 ```
 
-En fait c'est nginx lui-même qui écoute déjà sur le port 80 (le process `systemctl status` tournait bien) :
+Arf, par nginx lui-même qui écoute déjà sur le port 80 (le process `systemctl status` tournait bien d'ailleurs) :
 
 ```bash
 sudo systemctl stop nginx
@@ -199,17 +185,15 @@ sudo ss -tuln | grep :80
 # tcp   LISTEN 0      4096                 *:8080             *:*
 ```
 
-Après arrêt, le port 80 se libère bien. Donc nginx tourne correctement, écoute bien sur le bon port — le problème est ailleurs.
+Après arrêt, le port 80 se libère bien. Donc nginx tourne correctement et écoute bien sur le bon port. Le problème est donc ailleurs.
 
-### Round 4 : demander de l'aide à une IA, et se faire balader
-
-J'ai fini par demander à un assistant IA d'analyser ce log :
+J'ai fini par demander à l'ami Claude d'analyser ce log :
 
 ```bash
 2025/11/22 16:01:28 [notice] 1600#1600: using inherited sockets from "5;6;"
 ```
 
-Réponse : théorie de sockets "zombies" hérités d'un redémarrage de conteneur, qui bloqueraient le port 80 malgré l'absence de process visible dans `ss`. Solution proposée : tuer tous les process nginx avec `pkill -9`, vérifier le port, relancer, et en dernier recours `fuser -k 80/tcp`.
+Réponse : "théorie de sockets "zombies" hérités d'un redémarrage de conteneur, qui bloqueraient le port 80 malgré l'absence de process visible dans `ss`." Rien que ça. La solution proposée est de tuer tous les process nginx avec `pkill -9`, vérifier le port, relancer, et en dernier recours `fuser -k 80/tcp`.
 
 Est-ce que l'IA avait raison ?
 
@@ -224,13 +208,11 @@ sudo ss -tunap | grep :80    # nginx bien présent, PIDs visibles
 curl http://localhost        # toujours aucune réponse
 ```
 
-![[Pasted image 20260731214155.png]]
+<figure><img src="../../../.gitbook/assets/image (40).png" alt=""><figcaption></figcaption></figure>
 
-Même après avoir tout tué et forcé le port avec `fuser -k`, `curl` restait muet. La théorie des sockets fantômes ne tenait pas — le vrai problème était ailleurs.
+Nope. Même après avoir fait ça, toujours pas de réponse contenu avec curl en localhost.
 
-### Round 5 : le vrai coupable — un firewall caché
-
-Je me suis dit qu'il fallait checker les règles iptables :
+Allons faire un tour dans les règles iptables ?
 
 ```bash
 sudo iptables -L -n
@@ -241,15 +223,15 @@ target     prot opt source               destination
 DROP       tcp  --  0.0.0.0/0            127.0.0.1            tcp dpt:80 /* The hidden problem (IPv4) */
 ```
 
-Et voilà — une règle DROP explicitement commentée "The hidden problem". Bien joué, ils m'ont bien eu.
+Vwelàaaaa, une règle DROP explicitement commentée "The hidden problem". Tu m'as eu hein saligots !
 
-Suppression de la règle :
+Hop on enlève ça :
 
 ```bash
 sudo iptables -D OUTPUT 1
 ```
 
-Nouveau test :
+Et ça répond enfin !
 
 ```bash
 curl http://localhost | grep "Welcome to"
@@ -257,18 +239,14 @@ curl http://localhost | grep "Welcome to"
 <h1>Welcome to nginx!</h1>
 ```
 
-Ça répond enfin.
-
-### Finalisation
-
-Test du script directement :
+On test le script directement :
 
 ```bash
 bash /opt/scripts/health.sh
 # /opt/scripts/health.sh: line 4: /var/log/health.log: Permission denied
 ```
 
-Nouveau problème de permission sur le fichier de log — résolu en lançant avec sudo :
+Arf. Avec sudo peut-être ?
 
 ```bash
 sudo bash /opt/scripts/health.sh
@@ -276,7 +254,7 @@ head /var/log/health.log
 # Tue Mar 10 19:41:48 UTC 2026: STATUS: OK
 ```
 
-Reste à vérifier si le timer systemd censé lancer ce script toutes les 10 secondes existe :
+Parfait. On vérifie si le timer systemd censé lancer ce script toutes les 10 secondes existe :
 
 ```bash
 sudo systemctl list-unit-files --type=timer
@@ -284,22 +262,22 @@ sudo systemctl list-unit-files --type=timer
 # health.timer                 disabled enabled
 ```
 
-Il existe mais est désactivé. Activation :
+Il existe mais est désactivé. On l'active :
 
 ```bash
 sudo systemctl enable --now health.timer
 # Created symlink '/etc/systemd/system/timers.target.wants/health.timer' → '/etc/systemd/system/health.timer'.
 ```
 
-Vérification finale :
-
 ```bash
 agent/check.sh
 # OK
 ```
 
-Résolu.
+Résolu !
+
 ## Alexandria
+
 **Contexte :** un job de backup cron mal configuré.
 
 ```bash
@@ -312,20 +290,20 @@ MAILTO="broken@nonexistent.local"
 */5 * * * * /opt/backup/old_backup.sh > /dev/null 2>&1
 ```
 
-Deux problèmes visibles direct : le script appelé est `old_backup.sh` (probablement obsolète), et il tourne toutes les 5 minutes au lieu de la fréquence attendue. Correction de la ligne cron :
+Deux problèmes visibles direct : le script appelé est `old_backup.sh`, et il tourne toutes les 5 minutes au lieu de la fréquence attendue. On fix :
 
 ```bash
 */10 * * * * /opt/backup/backup.sh > /dev/null 2>&1
 ```
 
-Test manuel du script pour vérifier qu'il tourne correctement :
+Puis test du script :
 
 ```bash
 ./backup.sh
 # Error: Backup already running (lock file exists)
 ```
 
-Un fichier de lock bloque l'exécution. Suppression :
+Un fichier de lock bloque l'exécution. On le sort :
 
 ```bash
 sudo rm backup.lock
@@ -335,7 +313,7 @@ sudo rm backup.lock
 # Backup failed!
 ```
 
-Le script a aussi besoin des droits root pour écrire le lock file et l'archive. Avec sudo :
+En sudo ça sera mieux ;) :
 
 ```bash
 sudo ./backup.sh

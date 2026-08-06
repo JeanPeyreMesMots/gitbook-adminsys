@@ -2,42 +2,40 @@
 
 ### ASG (Auto Scaling Group)
 
-Dans une infrastructure composée d'un frontend et d'un backend, les services doivent être **stateless** pour pouvoir être répliqués sans contrainte. C'est ce qui permet de gérer un groupe de machines plutôt qu'une seule.
+Un ASG va s'occuper de créer des règles de mise à l'échelle : par exemple, ajouter une machine lorsqu'un certain seuil de CPU est dépassé, et en retirer lorsque la charge redescend (scaling / descaling automatique). Si le service ASG en lui-même est gratuit, les ressources qu'il déploie (instances, etc.) sont facturées. Cela nous permet de garder une infra **stateless** et réplicable sans contraintes, en gérant un groupe de machines plutôt qu'une seule.
 
-Un ASG va s'occuper de créer des règles de mise à l'échelle : par exemple, ajouter une machine lorsqu'un certain seuil de CPU est dépassé, et en retirer lorsque la charge redescend (scaling / descaling automatique). Si le service ASG en lui-même est gratuit, les ressources qu'il déploie (instances, etc.) sont facturées.
+L'ASG monitor H24 l'état des machines, si une instance est en erreur, elle est détruite et automatiquement remplacée par une nouvelle. Cette mécanique permet de ne plus avoir à se soucier des pannes solo d'infra, puisqu'une machine cassée est recréée d'office. On garantit alors la **disponibilité** du service.
 
-L'ASG surveille en permanence l'état de santé des machines : si une instance est en erreur, elle est détruite et automatiquement remplacée par une nouvelle. Cette mécanique permet, dans une large mesure, de ne plus se soucier des pannes individuelles d'infrastructure, puisqu'une machine défaillante est simplement recréée. On garantit alors la **disponibilité** globale du service.
-
-Enfin, les instances peuvent être réparties sur différentes zones de disponibilité : en cas de panne d'un data center entier, de nouvelles instances peuvent démarrer dans une autre zone.
+Enfin, les instances peuvent être réparties sur différentes AZ : en cas de panne d'un data center dedans, d'autres instances démarreront dans une autre zone.
 
 ### Concepts liés à l'ASG
 
-* **Un Launch Template** définit précisément le type d'instance à lancer (AMI, type d'instance, clé SSH, security groups, etc.). C'est ce modèle que l'ASG utilise à chaque fois qu'il doit créer une nouvelle instance.
-* **Une Scaling policy** détermine sous quelles conditions des machines doivent être ajoutées ou retirées (par exemple, un seuil d'utilisation CPU ou de stockage).
+* **Un Launch Template** : définit le type d'instance à lancer (AMI, EC2, SG...) que l'ASG utilise lorsqu'il doit créer une nouvelle instance.
+* **La Scaling policy** : définit les conditions qui s'activent pour ajouter ou retirer des machines (par exemple, un seuil d'utilisation CPU ou de stockage).
 
 ![](../../../.gitbook/assets/Pasted_image_20260611191314.png)
 
 _"Et une de plus... ;)"_
 
-> Il faut rester vigilant sur le nombre de règles de scaling définies : des règles trop nombreuses ou mal pensées peuvent entrer en conflit entre elles.
+> Attention : vigilance avec le nombre de règles de scaling définies. Des règles trop nombreuses ou mal pensées peuvent entrer en conflit entre elles.
 
 ### ELB (Elastic Load Balancer)
 
-L'ELB (Elastic Load Balancer) répartit le trafic entrant entre plusieurs instances EC2, pour éviter qu'une seule machine encaisse toute la charge. Il en existe deux types :
+L'ELB répartit le trafic entrant entre plusieurs instances EC2, pour éviter qu'une seule machine encaisse toute la charge. Un ELB est dit "élastique" car il s'adapte en fonction du volume de trafic, peu importe qu'il s'agisse d'un million ou de plusieurs millions de requêtes. Il redirige le trafic reçu sur un port donné vers l'ASG correspondant. Il existe en deux types :
 
-* **ALB (Application Load Balancer)** : un niveau au-dessus du NLB, opérant au niveau applicatif (HTTP/HTTPS) plutôt qu'au simple niveau TCP. Il permet des règles de routage plus fines, par exemple rediriger une requête vers un service différent selon l'URL demandée.
-* **NLB (Network Load Balancer)** : le point central qui reçoit l'ensemble des requêtes des utilisateurs. Il est dit "élastique" car il s'adapte automatiquement au volume de trafic, qu'il s'agisse d'un million ou de plusieurs millions de requêtes. Il redirige le trafic reçu sur un port donné vers l'Auto Scaling Group correspondant.
+* **NLB (Network Load Balancer)** : le point central qui reçoit l'ensemble des requêtes des utilisateurs.&#x20;
+* **ALB (Application Load Balancer)** : il opère au niveau applicatif (gérant le traffic HTTP/HTTPS) au lieu du niveau TCP. Il permet des gérer plus finement des règles de routages, comme forwarder une requête vers un service différent selon l'URL demandée par exemple.
 
 ### ALB : le plus utilisé
 
-ALB demeure le plus utilisé, on va se contenter d'utiliser ce dernier ;). En voici les caractéristiques :
+ALB demeure le plus utilisé, on va se contenter d'utiliser ce dernier. Il s'appuie sur 4 éléments :
 
-* **Listener** : définit sur quel port le load balancer écoute les requêtes entrantes.
-* **Target group** : définit vers quelles instances (ou groupes d'instance) rediriger les requêtes reçues.
-* **Rules** : règles de routage plus fines, style rediriger vers un service différent selon le domaine d'origine de la requête.
-* **Tarification** : coût fixe, de l'ordre de 16 $/mois.
+* **Listener** : le port d'écoute du load balancer.
+* **Target group** : définit vers quel groupes d'instances rediriger les requêtes reçues.
+* **Rules** : les règles de routage&#x20;
+* **Tarification** : l'ALB possède un coût fixe, de l'ordre de 16 $/mois.
 
-Un ELB est généralement associé à une seule application. Il est possible de mutualiser un même ELB entre plusieurs environnements (par exemple dev et prod), mais cela peut poser problème en cas d'incident, puisqu'un souci sur un environnement pourrait alors affecter l'autre.
+Un ELB est en générale associé à une seule application. Il est possible de mutualiser un même ELB entre plusieurs environnements (par exemple dev et prod), mais ça pourrait poser problème, un environnement pourrait alors affecter l'autre.
 
 Schéma d'ensemble de l'architecture :
 
@@ -46,8 +44,6 @@ Schéma d'ensemble de l'architecture :
 Cette combinaison ASG + ELB rend l'infrastructure autosuffisante, capable de s'adapter à la charge et de se réparer elle-même en cas de panne d'une instance :
 
 ![](../../../.gitbook/assets/Pasted_image_20260611195617.png)
-
-***
 
 ## Procédure : exercice pratique en AWS CLI
 

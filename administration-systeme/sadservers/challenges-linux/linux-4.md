@@ -183,9 +183,7 @@ curl https://localhost:2379/
 # Testing SSL
 ```
 
-La racine répond ("Testing SSL"), mais pas les endpoints etcd attendus. Et c'est **nginx** qui répond.
-
-Vérification de la conf nginx : rien d'anormal en apparence (écoute sur 443, config syntaxiquement valide) :
+Toujours bloque en "Testing SSL...". Vérification de la conf nginx : rien d'anormal en apparence (écoute sur 443, config syntaxiquement valide) :
 
 ```bash
 sudo nginx -t

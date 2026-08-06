@@ -41,17 +41,17 @@ Schéma d'ensemble de l'architecture :
 
 ![](../../../.gitbook/assets/Pasted_image_20260611193024.png)
 
-Cette combinaison ASG + ELB rend l'infrastructure autosuffisante, capable de s'adapter à la charge et de se réparer elle-même en cas de panne d'une instance :
+Le combo ASG + ELB rend l'infrastructure suffisante à elle même, en s'adaptant à la charge et avec hotfix en cas de panne d'une instance :
 
 ![](../../../.gitbook/assets/Pasted_image_20260611195617.png)
 
-## Procédure : exercice pratique en AWS CLI
+## Exercice pratique en AWS CLI
 
 L'exercice suivant sera réalisé directement en ligne de commande :
 
 ![](../../../.gitbook/assets/Pasted_image_20260613160233.png)
 
-**Ordre des opérations à respecter**, chaque étape dépendant souvent de l'ARN (identifiant de ressource) généré par l'étape précédente :
+**L'ordre des opérations à respecter est le suivant**, chaque étape dépendra parfois de l'ARN (identifiant de ressource) généré par l'étape précédente :
 
 ```
 1. Launch Template
@@ -64,7 +64,7 @@ L'exercice suivant sera réalisé directement en ligne de commande :
 
 ### 1. Création du Launch Template
 
-Le launch template définit la configuration des instances qui seront lancées par l'ASG :
+Comme vu précédemment, il définit la configuration des instances qui seront lancées par l'ASG :
 
 ```bash
 aws --profile myProfile ec2 create-launch-template \
@@ -78,9 +78,22 @@ aws --profile myProfile ec2 create-launch-template \
   }'
 ```
 
+Avec les éléments dedans :
+
+`--launch-template-name mcflurry-lt` : nom du template
+
+`--version-description "v1"` : versionning du LT, pour identifier ou rollback en cas de pépins. Ici on part sur la v1.
+
+Puis dans `launch-template-data` :
+
+* `ImageId` : l'AMI utilisée, sur laquelle on démarre chaque instance
+* `InstanceType: t3.micro` : type d'instance, ici la **t3.micro** qui comporte 2 vCPU, 1 Go de RAM. Un truc léger et idéal pour du test.
+* `KeyName` : la paire de clés SSH à associer aux instances, pour s'y connecter après
+* `SecurityGroupIds` : SG concernés, et donc les règles de firewall qui vont avec&#x20;
+
 ### 2. Création du Load Balancer (ALB)
 
-Le load balancer doit être créé avant le listener. Les subnets disponibles dans chaque zone de disponibilité sont d'abord récupérés :
+Le load balancer doit être créé avant le listener. Les subnets disponibles dans chaque AZ sont d'abord récupérés :
 
 ```bash
 $ aws --profile myProfile ec2 describe-subnets \
@@ -100,7 +113,7 @@ $ aws --profile myProfile ec2 describe-subnets \
 +------------+------------------+----------------------------+
 ```
 
-Le load balancer applicatif (ALB) est ensuite créé, réparti sur les subnets identifiés :
+L'ALB est ensuite créé, réparti sur ces dits-subnets :
 
 ```bash
 aws --profile myProfile elbv2 create-load-balancer \
@@ -126,7 +139,7 @@ aws --profile myProfile elbv2 create-target-group \
   --health-check-path /
 ```
 
-L'ARN du target group est renvoyé en sortie :
+Que l'on finit par avoir en sortie :
 
 ```bash
 "TargetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:960583973458:targetgroup/mcflurry-tg/a02a4cce8d6a248f",
@@ -134,7 +147,7 @@ L'ARN du target group est renvoyé en sortie :
 
 ### 4. Création du Listener
 
-Le listener relie le load balancer (via son ARN) au target group (via son ARN) sur un port donné :
+Le listener relie le load balancer via son ARN au target group, là aussi via son ARN, sur un port donné :
 
 ```bash
 aws --profile myProfile elbv2 create-listener \
@@ -144,15 +157,13 @@ aws --profile myProfile elbv2 create-listener \
   --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:us-east-1:960583973458:targetgroup/mcflurry-tg/a02a4cce8d6a248f
 ```
 
-L'ARN du listener est renvoyé en sortie :
-
 ```bash
 "ListenerArn": "arn:aws:elasticloadbalancing:us-east-1:960583973458:listener/app/mcflurry-alb/cf159c6b1ee5acd6/e0c2e25f6133a417",
 ```
 
 ### 5. Création de l'Auto Scaling Group
 
-L'ASG est créé en référençant le launch template et l'ARN du target group :
+On créé l'ASG y mettant le launch template et l'ARN du target group dans la commande suivante :
 
 ```bash
 aws --profile myProfile autoscaling create-auto-scaling-group \
@@ -165,7 +176,7 @@ aws --profile myProfile autoscaling create-auto-scaling-group \
   --target-group-arns arn:aws:elasticloadbalancing:us-east-1:960583973458:targetgroup/mcflurry-tg/a02a4cce8d6a248f
 ```
 
-Vérification que l'ASG est bien rattaché au bon target group :
+Puis on regarde si l'ASG est bien rattaché au bon target group défini :
 
 ```bash
 aws --profile myProfile autoscaling describe-auto-scaling-groups \
@@ -178,7 +189,7 @@ aws --profile myProfile autoscaling describe-auto-scaling-groups \
 
 ### 6. Création de la politique de scaling
 
-Une politique de scaling est créée, ciblant un taux d'utilisation CPU moyen de 30 % sur l'ensemble de l'ASG :
+On créé ensuite une politique de scaling, en choisissant un taux d'utilisation du CPU moyen de 30 % sur l'ensemble de l'ASG :
 
 ```bash
 aws --profile myProfile autoscaling put-scaling-policy \
@@ -211,7 +222,7 @@ Cette commande crée automatiquement deux alarmes CloudWatch associées (seuil h
 }
 ```
 
-Politique bien créée côté console :
+On voit ensuite que la politique est bien créée côté console :
 
 ![](../../../.gitbook/assets/Pasted_image_20260614002651.png)
 
@@ -224,9 +235,9 @@ curl http://mcflurry-alb-8475791.us-east-1.elb.amazonaws.com:8000/
 
 ### 7. Test de la montée en charge automatique
 
-**Problème rencontré** : Nginx, qui se contente de servir une simple page HTML statique, consomme très peu de CPU. Même avec un grand nombre de requêtes, le taux d'utilisation CPU risque donc de rester bas et de ne jamais déclencher la politique de scaling.
+**Problème rencontré** : Nginx sur mes serveurs se contente de servir une simple page HTML, ce qui ne consomme que très peu de CPU. Même en lançant un grand nombre de requêtes, le taux d'utilisation CPU risque de rester bas, et donc ne déclenchera pas la politique de scaling.
 
-**Solution retenue** : stresser directement le CPU des instances en parallèle, à l'aide de l'outil `stress` (à installer au préalable avec `sudo apt install stress -y`) :
+**La solutio ?** Stresser directement le CPU des instances, à l'aide de l'outil `stress` (à au préalable) qui va faire augmenter la charge de lui-même, pour voir si la policy s'exécute et créé les nouvelles machines :
 
 ```bash
 ssh -i mcflurry-kostan.pem ubuntu@35.168.112.58 "sudo apt install stress -y && stress --cpu 4 --timeout 300"
@@ -237,7 +248,7 @@ stress: info: [1552] dispatching hogs: 4 cpu, 0 io, 0 vm, 0 hdd
 stress: info: [1552] successful run completed in 300s
 ```
 
-En parallèle, un second terminal permet d'observer en direct l'apparition de nouvelles instances dans l'ASG :
+On ouvre un autre terminal pour regarder ça en direct :
 
 ```bash
 Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00:54:55 2026
@@ -250,7 +261,7 @@ Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00
 ]
 ```
 
-Au bout de 5 minutes de charge CPU soutenue, deux nouvelles instances sont bien apparues, portant le total à trois instances actives :
+Au bout de 5 minutes de charge, on peut voir que deux nouvelles instances sont bien apparues ! On dispose désormais de trois instances actives :
 
 ```bash
 Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00:54:55 2026
@@ -271,6 +282,6 @@ Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00
 ]
 ```
 
-La politique de scaling fonctionne donc comme attendu, avec un scaling automatique déclenché par la charge CPU réelle :
+La politique de scaling fonctionne donc comme attendu. On peut d'ailleurs observer le graphique d'usage CPU du groupe qui affiche la montée en charge de ce dernier :
 
 ![](../../../.gitbook/assets/Pasted_image_20260614011951.png)

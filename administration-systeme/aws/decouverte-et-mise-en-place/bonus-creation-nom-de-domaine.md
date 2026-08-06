@@ -1,7 +1,5 @@
 # Bonus - Création d'un nom de domaine
 
-### Hosted Zone Route 53 et enregistrements obligatoires
-
 Lorsqu'une **Hosted Zone** est créée dans Route 53 pour un domaine, AWS génère automatiquement deux enregistrements obligatoires, qui ne peuvent pas être supprimés :
 
 | Type                         | Rôle                                                                                    |
@@ -9,27 +7,23 @@ Lorsqu'une **Hosted Zone** est créée dans Route 53 pour un domaine, AWS génè
 | **NS** (Nameserver)          | Indique les 4 serveurs de noms de Route 53 à utiliser pour le domaine                   |
 | **SOA** (Start of Authority) | Informations d'autorité DNS de la zone (maître de zone, paramètres de rafraîchissement) |
 
-### Validation DNS d'un certificat ACM
+Pour valider un certificat SSL via DNS (avec ACM sur AWS), il est nécessaire d'ajouter un enregistrement CNAME dans la zone DNS du domaine. Tant que ce CNAME n'est pas présent, le certificat reste en statut "**pending validation**". Et donc, les ressources qui dépendent de ce certificat (comme une distri CloudFront pointant vers un bucket S3) ne peuvent pas être finalisées tant que le certificat n'est pas validé.
 
-Pour valider un certificat SSL généré via ACM par la méthode DNS, un enregistrement **CNAME** spécifique doit être ajouté à la zone DNS du domaine concerné. Tant que cet enregistrement n'est pas présent et propagé, le certificat reste au statut "en attente de validation", et les ressources qui en dépendent (comme une route pointant vers un bucket S3) ne peuvent pas être finalisées.
-
-***
+On va donc créer un nom de domaine afin de ne plus être embêté avec un certificat non valide.
 
 ## Procédure
 
-### 1. Tentative initiale de création du certificat SSL
-
-Une première tentative de génération de certificat SSL est effectuée pour le domaine `da-grind.fr` :
+On peut déjà essayer via la console de créer un certificat SSL pour le domaine `da-grind.fr` :
 
 ![](../../../.gitbook/assets/Pasted_image_20260531150855.png)
 
 > La validation par email est à éviter au profit de la validation par DNS.
 
-Une fois la demande initiée, l'enregistrement correspondant doit être créé côté route/S3 pour prouver la propriété du domaine :
+L'enregistrement correspondant doit ensuite être créé côté route/S3 pour prouver la propriété du domaine :
 
 ![](../../../.gitbook/assets/Pasted_image_20260531151052.png)
 
-La validation reste cependant bloquée : les enregistrements DNS apparaissent grisés, et la route ne peut pas être créée tant qu'un enregistrement DNS n'a pas été créé dans Route 53 :
+Sauf que... la validation reste bloquée : les enregistrements DNS apparaissent grisés. La route ne peut pas être créée tant qu'un enregistrement DNS n'a pas été créé dans Route 53, on arrange donc ça :
 
 ![](../../../.gitbook/assets/Pasted_image_20260531151841.png)
 
@@ -47,7 +41,7 @@ Trois enregistrements DNS sont désormais présents dans Route 53 :
 
 ### 2. Achat du domaine chez OVH
 
-En suivant la formation, le formateur (cocadmin) utilisait un nom de domaine personnel, ce qui a conduit à une erreur : une tentative de génération de certificat a été faite pour un domaine qui n'était en réalité pas enregistré. Le domaine `da-grind.fr` a donc été acheté chez OVH pour corriger ce point :
+En suivant la formation, le formateur (cocadmin) utilisait un nom de domaine personnel, ce qui a conduit à une erreur : une tentative de génération de certificat a été faite pour un domaine qui n'était en réalité pas enregistré. J'ai donc acheté le domaine `da-grind.fr` OVH pour qu'il existe :
 
 ![](../../../.gitbook/assets/Pasted_image_20260601184149.png)
 
@@ -177,4 +171,4 @@ Ces quatre serveurs de noms sont ensuite renseignés côté interface OVH, à la
 
 ![](../../../.gitbook/assets/Pasted_image_20260602174428.png)
 
-> À compléter : vérification finale de la propagation
+NOTE : non terminé, à finaliser plus tard.

@@ -1,5 +1,7 @@
 # Bonus - Création d'un nom de domaine
 
+NOTE : cette partie n'est pas terminé, il reste à finaliser la migration du site depuis l'instance AWS vers le domaine en question. Cela sera exposé sur le GitBook une fois fait.
+
 Lorsqu'une **Hosted Zone** est créée dans Route 53 pour un domaine, AWS génère automatiquement deux enregistrements obligatoires, qui ne peuvent pas être supprimés :
 
 | Type                         | Rôle                                                                                    |
@@ -170,5 +172,3 @@ Address: 2600:9000:5306:2c00::1
 Ces quatre serveurs de noms sont ensuite renseignés côté interface OVH, à la place des serveurs de noms par défaut d'OVH, afin de déléguer la gestion DNS du domaine à Route 53 :
 
 ![](../../../.gitbook/assets/Pasted_image_20260602174428.png)
-
-NOTE : non terminé, à finaliser plus tard.

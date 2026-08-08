@@ -1,4 +1,5 @@
-﻿## Bekasi
+# 7 - Bekasi
+
 **Point de départ :** impossible de redémarrer nginx ou de vérifier sa conf normalement.
 
 ```bash
@@ -10,7 +11,7 @@ systemctl start nginx
 # Failed to start nginx.service: Access denied
 ```
 
-Pas de binaire `nginx` en accès direct, et `systemctl` refuse même de le stopper sans sudo — réflexe à corriger côté commandes utilisées, mais le service tourne déjà :
+Pas de binaire `nginx` en accès direct, et `systemctl` refuse même de le stopper sans sudo. Pourtant le service tourne déjà :
 
 ```bash
 systemctl status nginx.service
@@ -19,11 +20,7 @@ systemctl status nginx.service
 # Failed to parse PID from file /run/nginx.pid: Invalid argument
 ```
 
-Une erreur apparaît dans les logs systemd malgré le service "actif" — mise de côté pour plus tard (`vamos a ver lo mas tarde`), pas bloquant dans l'immédiat.
-
-### Explorer la conf nginx
-
-Conf principale banale, rien d'anormal. Le vhost par défaut est plus intéressant :
+En regardant la cong de nginx je remarque un truc avec les vhost :
 
 ```nginx
 server {
@@ -53,18 +50,16 @@ ll /srv/
 # total 8.0K, rien dedans à part . et ..
 ```
 
-Vide — pas normal, mais pas le blocage principal (l'appli dynamique passe par uWSGI, pas par ce dossier).
+Vide, pas normal, mais c'est pas le blocage principal (l'appli dynamique passe par uWSGI, pas par ce dossier).
 
-### Direction supervisor
-
-La solution mentionnait `supervisorctl` — outil que je ne connaissais pas avant ce chall ([doc utilisée](http://blog.stephane-robert.info/docs/services/processus/supervisor/)), un gestionnaire de process qui peut superviser et relancer des applis (ici l'appli Python/uWSGI).
+Au bout de quelques temps, je check la solution qui mentionne `supervisorctl,`un outil que je ne connaissais pas avant ce chall ([doc utilisée](http://blog.stephane-robert.info/docs/services/processus/supervisor/)), un gestionnaire de process qui peut superviser et relancer des applis (en l'occurrence l'appli Python/uWSGI).
 
 ```bash
 cat /etc/supervisor/supervisord.conf
 # files = /etc/supervisor/conf.d/*.conf
 ```
 
-Vérification des logs supervisor :
+On regarde les logs supervisor :
 
 ```bash
 cat /var/log/supervisor/supervisord.log
@@ -76,17 +71,16 @@ cat /var/log/supervisor/supervisord.log
 # INFO stopped: bekasi (exit status 0)
 ```
 
-Le process `bekasi` démarre, tourne un peu, puis s'arrête — comportement instable plutôt qu'un crash immédiat.
-### Lancer uWSGI à la main pour isoler le problème
+On remarque que le process `bekasi` démarre, tourne un peu, puis s'arrête.
 
-Test du binaire directement, sans passer par supervisor :
+On lance le binaire à la main déjà pour voir ce qui se passe, sans passer par supervisor :
 
 ```bash
 ./uwsgi
 # The -s/--socket option is missing and stdin is not a socket.
 ```
 
-Besoin explicite de préciser le socket :
+Arf, il faut préciser le socket :
 
 ```bash
 ./uwsgi -s ../bekasi.sock
@@ -95,7 +89,7 @@ Besoin explicite de préciser le socket :
 # spawned uWSGI worker 1 (and the only) (pid: 1590, cores: 1)
 ```
 
-Ça tourne. Passage en arrière-plan pour tester en parallèle :
+Ça tourne. On passe en arrière-plan pour tester en parallèle :
 
 ```bash
 # Ctrl+Z puis :
@@ -104,11 +98,9 @@ curl -k https://bekasi
 # 502 Bad Gateway
 ```
 
-Toujours 502 malgré uWSGI apparemment lancé — donc soit nginx ne pointe pas où il faut, soit uWSGI ne répond pas correctement à ce socket précis.
+Mais toujours un 502 malgré uWSGI apparemment lancé. Soit nginx ne pointe pas où il faut, soit uWGI ne répond pas correctement à ce socket précis.
 
-### Comparer lancement manuel vs supervisor
-
-Via `supervisorctl`, le process tourne aussi et log un comportement proche, mais avec plus de détails (mode preforking, plusieurs workers) :
+Cependant via `supervisorctl`, on remarque que le process tourne aussi et log du détail :
 
 ```bash
 sudo supervisorctl
@@ -120,18 +112,14 @@ supervisor> tail -f bekasi
 # spawned uWSGI worker 1..5
 ```
 
-En comparant la sortie du lancement manuel et celle via supervisor, différence notable dans les toutes premières lignes du lancement manuel :
+En comparant la sortie du lancement manuel avec celle du supervisor, on voit une différence notable dans les toutes premières lignes du lancement manuel :
 
-```text
+```
 !!! no internal routing support, rebuild with pcre support !!!
 *** WARNING: you are running uWSGI without its master process manager ***
 ```
 
-Ces lignes n'apparaissent pas dans la version supervisor — indice que l'environnement d'exécution diffère entre les deux lancements, pas juste la présence d'un master process.
-
-### La vraie cause : variables d'environnement manquantes
-
-La piste de solution suggérait de vérifier `~/.bashrc` :
+Ces lignes n'apparaissent pas dans la version supervisor. On en déduit donc que l'environnement d'exécution diffère entre les deux lancements. D'où le fait que la piste de solution suggérait de vérifier `~/.bashrc` :
 
 ```bash
 tail -f ~/.bashrc
@@ -139,7 +127,7 @@ export BEKASI_SERVER=bekasi.sadservers.com
 export BEKASI_USER=admin
 ```
 
-Deux variables d'environnement définies uniquement dans le shell interactif de l'utilisateur — donc présentes quand on lance `uwsgi` à la main depuis ce shell, mais absentes du contexte dans lequel `supervisord` lance ses process (qui ne source pas `~/.bashrc`).
+On retrouve deux variables d'environnement définies uniquement dans le shell interactif de l'utilisateur. Elles sont donc présentes quand on lance `uwsgi` à la main depuis ce shell, mais absentes du contexte dans lequel `supervisord` lance ses process (qui source pas `~/.bashrc`).
 
 Vérification de la conf supervisor existante :
 
@@ -154,7 +142,7 @@ stdout_logfile=/var/log/bekasi.log
 user=admin
 ```
 
-Aucune variable d'environnement définie ici. Ajout de la ligne `environment` avec les deux variables nécessaires :
+Aucune variable d'environnement définie ici, on en ajoute deux avec les nécessaires :
 
 ```ini
 [program:bekasi]
@@ -167,7 +155,7 @@ user=admin
 environment=BEKASI_SERVER="bekasi.sadservers.com",BEKASI_USER="admin"
 ```
 
-### Rechargement et validation
+Puis on recharge le tout :
 
 ```bash
 sudo supervisorctl

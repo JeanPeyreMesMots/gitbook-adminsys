@@ -1,12 +1,13 @@
-﻿## Batumi
-### Reconnaissance
+# 8 - Batumi
+
+Un serveur caddy est ici à débugger :
 
 ```bash
 ps faux | grep "caddy"
 # /usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
 ```
 
-Conf Caddy simple, en reverse proxy vers un backend local :
+Sa conf reste simple, en reverse proxy vers un backend local :
 
 ```caddyfile
 :80 {
@@ -14,7 +15,7 @@ Conf Caddy simple, en reverse proxy vers un backend local :
 }
 ```
 
-### Round 1 : le backend répond en 500
+Sauf qu'il répond en 500 :
 
 ```bash
 curl -vv -I http://localhost:5050
@@ -22,7 +23,7 @@ curl -vv -I http://localhost:5050
 # Content-Length: 158 (zero-length body malgré le header)
 ```
 
-Le backend sur le port 5050 répond mais en erreur. Check des logs du service Caddy via `journalctl` — la conf est bien chargée, tout semble démarrer normalement côté Caddy lui-même :
+On check les logs du service Caddy via `journalctl` et la conf semble bien chargée, de même pour l'état en running :
 
 ```bash
 journalctl -u caddy.service -e
@@ -30,22 +31,22 @@ journalctl -u caddy.service -e
 # server running, protocols h1/h2/h3
 ```
 
-Un warning apparaît sur le formatage du Caddyfile (`caddy fmt --overwrite`), sans gravité apparente. Côté unités systemd, une deuxième unité liée existe mais est désactivée :
+Un warning est présent sur le formatage du Caddyfile (`caddy fmt --overwrite`). Côté systemd, une deuxième existe mais est désactivée :
 
 ```bash
 caddy-api.service   disabled  enabled
 caddy.service       enabled   enabled
 ```
 
-Activation par précaution :
+On active par précaution :
 
 ```bash
 sudo systemctl enable caddy-api.service
 ```
 
-Statut de `caddy.service` re-vérifié : actif, rien d'anormal dans les logs. Donc Caddy lui-même n'est pas le problème — le souci vient bien du backend qu'il proxifie.
+Puis on recheck les logs de `caddy.service` mais rien d'anormal dans les logs. Donc Caddy n'est pas fautif.
 
-### Round 2 : le port 80 bloqué par iptables
+Comme dans les challs précédents on check les règles pour voir si ils se sont pas amusés à en mettre une qui dropperait des trucs pour nous faire galérer :D  :
 
 ```bash
 sudo iptables -L
@@ -53,15 +54,13 @@ Chain INPUT (policy ACCEPT)
 DROP  tcp  --  anywhere  anywhere  tcp dpt:http
 ```
 
-Une règle DROP explicite bloque tout le trafic entrant sur le port 80. Suppression :
+Et effectivement une règle DROP bloque tout le trafic entrant sur le port web, décidément. On l'enlève :
 
 ```bash
 sudo iptables -D INPUT -p tcp --dport 80 -j DROP
 ```
 
-### Round 3 : mauvais port pour PostgreSQL
-
-Nouveau test, nouvelle erreur — cette fois côté base de données :
+Mais ça veut toujours pas... seulement on a une erreur sur le porte de PostegreSQL :
 
 ```bash
 curl http://localhost
@@ -69,14 +68,14 @@ curl http://localhost
 # Is the server running on host "127.0.0.1" and accepting TCP/IP connections on port 5433?
 ```
 
-Coup d'œil dans le script Python du backend, qui interroge bien une base PostgreSQL :
+On jette un coup d'œil dans le script Python du backend, qui interroge bien une base PostgreSQL :
 
 ```python
 conn = psycopg2.connect(**db_params)
 cursor.execute("SELECT secret FROM secrets WHERE id=1;")
 ```
 
-Vérification du service PostgreSQL :
+Checkup habituel :
 
 ```bash
 systemctl status postgresql.service
@@ -86,16 +85,14 @@ sudo systemctl status postgresql.service
 # Active: active (exited) — ExecStart=/bin/true
 ```
 
-Le service "démarre" mais via `/bin/true`, donc ne fait littéralement rien — pas un vrai lancement de PostgreSQL. Malgré ça, l'erreur persiste. Vérification de ce qui écoute réellement :
+Le service "démarre" mais via `/bin/true`, ce que je trouve étrange. Par acquis de conscience je choisis quand même de voir ce qui écoute réellement :
 
 ```bash
 sudo netstat -tunalp | grep postgres
 # tcp  127.0.0.1:5432  LISTEN  1580/postgres
 ```
 
-PostgreSQL tourne en fait déjà, mais sur le port **5432** (port standard), alors que le `.env` de l'appli pointe sur **5433**. Mismatch de configuration entre l'appli et la vraie base.
-
-Tentative de redémarrage du service PostgreSQL pour voir si ça change quelque chose :
+PostgreSQL tourne déjà sur le port **5432** (port standard), alors que le `.env` de l'appli, lui, pointe sur **5433**. Un restart du service nous aiderait ?
 
 ```bash
 sudo systemctl restart postgresql.service
@@ -104,11 +101,9 @@ curl http://localhost
 # même erreur, port 5433 introuvable
 ```
 
-Le redémarrage du service systemd (qui ne fait rien de réel, on l'a vu) ne pouvait évidemment rien changer.
+<figure><img src="../../../.gitbook/assets/image (43).png" alt=""><figcaption></figcaption></figure>
 
-### La vraie dernière étape : relancer le connecteur applicatif
-
-La solution indiquait qu'il fallait relancer un service dédié, `db_connector`, apparemment le vrai pont entre le backend web et PostgreSQL :
+Finalement la solution indiquait qu'il fallait relancer un service dédié, `db_connector`, qui fait office de vrai pont entre le backend web et PostgreSQL :
 
 ```bash
 systemctl list-unit-files | grep db_connector

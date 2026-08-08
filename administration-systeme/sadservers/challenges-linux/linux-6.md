@@ -54,9 +54,9 @@ curl -v -u admin:admin -H "User-Agent:" http://localhost:5000
 Welcome! Password is FDZPmh5AX3oiJt
 ```
 
-Bingo — sans User-Agent, l'appli laisse fuiter un mot de passe en clair dans la réponse. Manifestement une vérification de sécurité mal branchée qui dépend (à tort) du User-Agent plutôt que des vraies credentials.
+Bingo, sans User-Agent l'appli laisse passer un mot de passe en clair dans la réponse.
 
-Tentatives de spray le mdp avec différents logins (admin, root, sad, sadservers, guest...) : à chaque fois la même réponse "**Welcome**!" revient, peu importe le login utilisé.
+On spray le mdp avec différents logins (admin, root, sad, sadservers, guest...) : à chaque fois la même réponse "**Welcome**!" revient, peu importe le login utilisé.
 
 Donc ce n'était pas un vrai identifiant de connexion, mais très probablement directement la solution du challenge :
 
@@ -79,7 +79,7 @@ ll
 # -rw-r--r-- 1 admin admin 35148 Mar 23 16:43 names_COPY
 ```
 
-Compression standard pour test :
+On compresse :
 
 ```bash
 xz -k names_COPY
@@ -94,7 +94,7 @@ xz -9 names_COPY
 # xz: names_COPY: Cannot allocate memory
 ```
 
-Échec, pas assez de mémoire disponible pour ce niveau de compression sur cette machine. Repli sur un niveau intermédiaire :
+Échec, pas assez d'espace disque. Essayons avec le niveau 5 :
 
 ```bash
 xz -5 names_COPY
@@ -102,7 +102,7 @@ ll
 # names_COPY.xz  9336 octets
 ```
 
-Ça fonctionne. Copie du résultat dans le dossier solution attendu :
+Ça fonctionne, on copie le résultat dans le dossier solution  :
 
 ```bash
 cp names_COPY.xz solution/
@@ -110,16 +110,14 @@ cp names_COPY.xz solution/
 
 ### Moyogalpa
 
-**Contexte (via `/home/README.txt`) :** une application Golang sécurisée par John et Mike, cassée par leurs propres mesures de sécurité. Contraintes à respecter :
+**Contexte :** une appli en Go sécurisée par John et Mike, cassée par eux. Le chall nous donne un cahier des charges :
 
 * communication uniquement en HTTPS ;
 * accès limité aux seuls fichiers nécessaires (certificats + fichiers statiques) ;
 * rate limiting à 10 requêtes/seconde ;
 * exécution sous utilisateur non-root.
 
-#### Pourquoi j'ai galéré au début
-
-L'appli n'était pas lancée à la main (`go run ...`), mais gérée comme service systemd — j'ai mis un moment à réaliser qu'il fallait donc regarder les logs via `journalctl -u webapp` plutôt que chercher un process lancé manuellement.
+Au début, pourquoi j'ai galéré car l'appli n'était pas lancée à la main (via un `go run ...`), mais gérée comme service systemd. J'ai mis un moment à me décider qu'il fallait regarder les logs via `journalctl -u webapp` plutôt que chercher un process lancé manuellement.
 
 ```bash
 sudo journalctl -u webapp
@@ -128,7 +126,7 @@ sudo journalctl -u webapp
 # can not access certificate/key file. sleeping for 10s and will retry
 ```
 
-#### Round 1 : permissions sur les certificats
+Déjà les permissions sur les certificats sont pas ok, on commence par les corriger :
 
 ```bash
 ll /home/webapp/pki/
@@ -137,22 +135,18 @@ ll /home/webapp/
 # drwx------ 2 root root 4096 Apr 10 2024 pki
 ```
 
-Correction des permissions et du propriétaire :
-
 ```bash
 sudo chmod -R 755 pki/
 sudo chown -R admin: pki/
 ```
 
-Toujours en échec derrière :
+Mais ça veut pas :
 
 ```bash
 open /home/webapp/pki/server.pem: permission denied
 ```
 
-#### Round 2 : vérifier les certificats eux-mêmes
-
-Test de validité avec openssl sur chaque fichier :
+Avec une boucle openssh on peut tester la validité de chaque chaque fichier de certificat :
 
 ```bash
 for cert in *.crt *.pem; do
@@ -170,7 +164,7 @@ head server.pem
 # -----BEGIN RSA PRIVATE KEY-----
 ```
 
-Logique — c'est une clé privée RSA, pas un certificat, donc `openssl x509` ne peut pas le lire (mauvais outil pour ce type de fichier). Vérification que la clé est valide et correspond bien au certificat :
+Logique : il s'agit d'une clé privée RSA, pas d'un certificat, donc `openssl x509` ne peut pas le lire. On vérifie quand même que la clé est valide et qu'elle correspond bien au certificat :
 
 ```bash
 openssl rsa -in server.pem -check -noout
@@ -181,15 +175,15 @@ openssl x509 -noout -modulus -in server.crt | openssl md5
 # mêmes hash des deux côtés → la paire clé/certificat est cohérente
 ```
 
-Donc les fichiers eux-mêmes étaient sains — le souci devait venir d'ailleurs, probablement du code Go de l'application. Permissions ajustées sur les fichiers statiques par précaution également, sans effet sur le problème principal :
+Les fichiers eux-mêmes sont sains. J'ai ajusté les permissions sur les fichiers statiques par précaution :
 
 ```bash
 sudo chmod -R 755 static-files/
 ```
 
-#### Round 3 : propriétaire correct + DNS local
+Mais sans effets sur le problème principal.
 
-Après avoir remis les fichiers au bon propriétaire (`webapp:webapp` plutôt qu'`admin`), et cherché la solution en ligne, découverte qu'il fallait enregistrer le certificat CA dans le magasin système pour éviter d'avoir à utiliser `--cacert` à chaque requête :
+Après avoir remis les fichiers au bon proprio (`webapp:webapp` plutôt qu'`admin`), et cherché la solution en ligne, j'ai découvert qu'il fallait mettre le certificat dans le dossier système " _**/usr/local/share/ca-certificates/**_" pour éviter d'avoir à utiliser `--cacert` à chaque requête :
 
 ```bash
 sudo cp /home/webapp/pki/CA.crt /usr/local/share/ca-certificates/webappCA.crt
@@ -197,35 +191,33 @@ sudo chmod 644 /usr/local/share/ca-certificates/webappCA.crt
 sudo update-ca-certificates
 ```
 
-Test :
+On yest :
 
 ```bash
 curl https://webapp:7000
 # curl: (6) Could not resolve host: webapp
 ```
 
-Le nom d'hôte `webapp` n'était tout simplement pas résolu — ajout dans `/etc/hosts` :
+On va y arriver :D Le nom d'hôte `webapp` se résout pas car pas présent dans /etc/hosts, on l'ajoute dedans :
 
 ```bash
 echo "127.0.0.1 webapp" | sudo tee --append /etc/hosts
 ```
 
-Nouvelle erreur, différente :
+Nouvelle erreur, différente cette fois-ci :
 
 ```bash
 curl https://webapp:7000
 # Forbidden
 ```
 
-Logs :
+Hop là les logs :
 
 ```bash
 open /home/webapp/static-files/users.html: permission denied
 ```
 
-#### Round 4 : AppArmor, la vraie cause finale
-
-Aucune idée que ça pouvait venir de là — trouvé en cherchant la solution que l'application est confinée par un profil AppArmor (`/etc/apparmor.d/usr.local.bin.webapp`), qui autorisait explicitement l'accès aux certificats mais pas aux fichiers statiques. Le profil :
+Et là, le vraie coupable se montre. En cherchant le message "**permission denied**" sur Google, l'application est confinée par un profil AppArmor (`/etc/apparmor.d/usr.local.bin.webapp`), qui autorisait l'accès aux certificats mais pas aux fichiers statiques. Le profil se présente comme suit :
 
 ```
 /home/webapp/pki/ r,
@@ -234,14 +226,14 @@ Aucune idée que ça pouvait venir de là — trouvé en cherchant la solution q
 # manquant : accès à static-files
 ```
 
-Ajout des lignes nécessaires :
+On ajoute les lignes nécessaires :
 
 ```
 /home/webapp/static-files/ r,
 /home/webapp/static-files/* r,
 ```
 
-Rechargement du profil :
+Et on reload :
 
 ```bash
 apparmor_parser -r /etc/apparmor.d/usr.local.bin.webapp
@@ -254,4 +246,5 @@ curl https://webapp:7000/users.html
 # <p>From Users Page</p>
 ```
 
-Résolu — après permissions classiques, vérification des certificats, résolution DNS locale, et enfin un mécanisme de confinement (AppArmor) totalement absent des premières hypothèses.
+Résolu. Dans l'ordre on a réglé les permissions classiques, vérifié les certificats, la DNS locale, et enfin le AppArmor.
+

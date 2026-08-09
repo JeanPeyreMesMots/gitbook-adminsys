@@ -1,10 +1,12 @@
-## ==Auderghem==
+# 2 - Auderghem, Woluwe, Torino & San-juan
+
+### <mark style="color:$warning;">Auderghem</mark>
 
 **Objectif :** un reverse proxy nginx doit rediriger le trafic vers deux conteneurs `statichtml1` et `statichtml2`.
 
 On inspecte chaque conteneur pour ses IP :
 
-```text
+```
 statichtml1 --> 172.172.0.11
 statichtml2 --> 172.172.0.12
 nginx       --> 172.17.0.2
@@ -12,17 +14,15 @@ nginx       --> 172.17.0.2
 
 La conf nginx (`/home/admin/app/default.conf`) référence les hostnames `statichtml1.sadservers.local` et `statichtml2.sadservers.local`. Le ping fonctionne sur les 3 IP directement, mais pas sur les hostnames.
 
-### Round 1 : problème réseau — nginx n'est pas sur le bon réseau Docker
+Cependant : `statichtml1`/`statichtml2` sont sur un réseau bridge dédié `static-net`, alors que `nginx` reste sur le réseau `bridge` par défaut.
 
-Répartition observée : `statichtml1`/`statichtml2` sont sur un réseau bridge dédié nommé `static-net`, alors que `nginx` reste sur le réseau `bridge` par défaut.
+Les logs nginx confirment ça :
 
-Les logs nginx confirment le symptôme :
-
-```text
+```
 upstream timed out (110: Connection timed out) while connecting to upstream ... http://172.172.0.11:80/
 ```
 
-Vérification du réseau `static-net` :
+On check le réseau `static-net` :
 
 ```bash
 docker network inspect cc3e04c023f1
@@ -30,7 +30,7 @@ docker network inspect cc3e04c023f1
 # statichtml1 -> 172.172.0.11, statichtml2 -> 172.172.0.12
 ```
 
-Depuis l'intérieur du conteneur nginx, le ping par IP fonctionne mais pas par hostname. Logique, puisque nginx n'est même pas dans ce réseau (confirmé via `docker inspect nginx`, qui ne montre que le réseau `bridge` par défaut).
+Depuis l'intérieur du conteneur nginx, le ping par IP fonctionne mais pas par hostname. Logique, puisque nginx n'est même pas dans ce réseau.
 
 Une solution serait de connecter nginx au réseau `static-net` :
 
@@ -38,16 +38,16 @@ Une solution serait de connecter nginx au réseau `static-net` :
 docker network connect static-net nginx
 ```
 
-`docker inspect nginx` montre bien la nouvelle entrée réseau avec résolution DNS (`DNSNames`). Le ping par hostname fonctionne enfin depuis l'intérieur du conteneur nginx (après installation de `iputils-ping`, absent par défaut de l'image).
+`docker inspect nginx` montre bien la conf réseau, et le ping par hostname fonctionne depuis l'intérieur du conteneur nginx (après installation de `iputils-ping` toutefois).
 
-### Round 2 : toujours en échec depuis l'hôte, cette fois un problème de port
+Cependant, on tape sur la machine en elle-même :
 
 ```bash
 curl http://localhost/1
 # 502 Bad Gateway
 ```
 
-Je redémarrage tous les conteneurs par précaution mais sans effet. En observant `docker ps`, les conteneurs `statichtml1`/`statichtml2` écoutent en fait sur le port **3000**, pas 80.
+Je redémarre tous les conteneurs par précaution mais sans effet. En observant `docker ps`, les conteneurs `statichtml1`/`statichtml2` écoutent en fait sur le port **3000**, pas 80.
 
 Or, dans la conf nginx, le `proxy_pass` ne précisait aucun port :
 
@@ -57,7 +57,7 @@ location /1 {
 }
 ```
 
-Sans port explicite, nginx redirige par défaut vers le port 80 du backend, qui n'écoute pas dessus. Correction :
+Sans port explicite, nginx redirige par défaut vers le port 80 du backend, qui n'écoute pas dessus. On corrige ::
 
 ```nginx
 proxy_pass http://statichtml1.sadservers.local:3000;
@@ -65,7 +65,8 @@ proxy_pass http://statichtml2.sadservers.local:3000;
 ```
 
 On reboot les conteneurs, ce qui résout le chall ensuite.
-## ==Woluwe==
+
+### <mark style="color:$warning;">Woluwe</mark>
 
 **Contexte :** un pipeline a généré plusieurs images Docker locales pour une même appli web ; toutes sauf une contiennent une typo introduite par un développeur (`index.htmlz` au lieu de `index.html`). Objectif : retrouver la bonne image, la tagger `prod`, et la déployer sur le port 3000.
 
@@ -103,7 +104,8 @@ curl http://localhost:3000
 ```
 
 Résolu.
-## ==Torino==
+
+### <mark style="color:$warning;">Torino</mark>
 
 **Objectif :** réduire la taille d'une image Node.js qui pèse environ 1 Go.
 
@@ -126,7 +128,7 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 ```
 
-`node:16` (basée sur Debian complet) pèse près d'1 Go, contre ~118 Mo pour `node:16-alpine`. On peut basculer vers l'Alpine, après sauvegarde du Dockerfile d'origine par précaution :
+`node:16` (basée sur Debian complet) pèse près d'1 Go, contre \~118 Mo pour `node:16-alpine`. On peut basculer vers l'Alpine, après sauvegarde du Dockerfile d'origine par précaution :
 
 ```bash
 cp Dockerfile Dockerfile_OLD
@@ -160,7 +162,7 @@ curl localhost:3000
 
 Résolu.
 
-### Bonus : et si on demandait à l'IA ?
+#### Bonus : et si on demandait à l'IA ?
 
 En demandant à ChatGPT d'optimiser encore plus le Dockerfile et le contenu du dossier en contexte, il nous sort un **build multi-stage** :
 
@@ -182,7 +184,8 @@ CMD ["node", "app.js"]
 ```
 
 Cette version sépare l'installation des dépendances (étape build) du runtime final, en ne copiant que le strict nécessaire (`node_modules` déjà installés + code applicatif) dans l'image finale. Cela évite d'embarquer le cache npm, les fichiers de lock, et les outils de build dans l'image livrée.
-## ==San-juan==
+
+### <mark style="color:$warning;">San-Juan</mark>
 
 **Objectif :** un Traefik dockerisé qui route vers plusieurs conteneurs `whoami`, mais ne répond correctement qu'une fois sur trois.
 
@@ -198,14 +201,14 @@ docker ps
 # traefik + 4 conteneurs whoami (app01 à app04), tous "Up"
 ```
 
-Logs du conteneur Traefik principal, filtrés sur les erreurs :
+Logs des erreurs du conteneur Traefik :
 
 ```bash
 docker logs a2f3f16b0928 | grep "error"
 # 502 Bad Gateway error="dial tcp 172.19.0.3:81: connect: connection refused"
 ```
 
-Voilà : Traefik essaie de joindre un des conteneurs sur le **port 81**. Ce port n'existe évidemment pas côté conteneur `whoami` (qui écoute en 80).
+Voilà : Traefik essaie de joindre un des conteneurs sur le **port 81**. Ce port n'existe pas côté conteneur `whoami` (qui écoute en 80).
 
 Dans le `docker-compose.yml`, le conteneur fautif `app02` déclare explicitement ce mauvais port dans son label Traefik :
 
@@ -230,3 +233,4 @@ Test après correction : les 4 conteneurs répondent désormais correctement à 
 curl -s app.sadserver | head -n1
 # Hostname: xxx (à chaque fois, load-balancing normal entre les 4 whoami)
 ```
+

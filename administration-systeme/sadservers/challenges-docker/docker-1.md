@@ -124,7 +124,7 @@ Toujours en échec, mais avec une **erreur différente** cette fois :
 DETAIL: max_worker_processes = 4 is a lower setting than on the primary server, where its value was 8.
 ```
 
-Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être égales ou au-dessus des valeurs du primaire, chacun révélé un par un après correction du précédent :
+Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être égales ou au-dessus des valeurs du premier :
 
 * `max_connections` → 100
 * `max_worker_processes` → 10 (le primaire était à 8)
@@ -135,7 +135,7 @@ Puis le compose a pu relancer le service correctement sans autre erreur. Ce qui 
 
 ### <mark style="color:$warning;">Bharuch</mark>
 
-On à affaire ici à un conteneur qui boucle en erreur immédiatement au lancement.
+On a affaire ici à un conteneur qui boucle en erreur immédiatement au lancement :
 
 ```bash
 docker logs web-server
@@ -143,7 +143,7 @@ docker logs web-server
 # (répété en boucle)
 ```
 
-On tente de retrouver et lire directement le code applicatif depuis le système de fichiers de l'image, en cherchant le fichier `app.py` :
+On cherchant le code applicatif on tombe sur un `app.py` :
 
 ```bash
 sudo find / -name app.py
@@ -177,7 +177,7 @@ Ce qui résout le challenge.
 
 ### <mark style="color:$warning;">Quito</mark>
 
-**Objectif :** piloter le conteneur `nginx` (le démarrer) depuis un autre conteneur, `docker-access`.
+**Objectif :** démarrer le conteneur `nginx` depuis le conteneur `docker-access`.
 
 ```bash
 docker ps -a
@@ -188,14 +188,14 @@ nginx           Exited (137) 10 months ago
 docker-access    Exited (137) 14 seconds ago
 ```
 
-On démarrage le conteneur pilote "**docker-access**" puis on rentre dedans :
+On démarre le conteneur "**docker-access**" puis on rentre dedans :
 
 ```bash
 docker start docker-access
 docker exec -ti docker-access sh
 ```
 
-Cependant, ça nous dit qu'on a pas d'accès au démon Docker depuis l'intérieur :
+Cependant ça nous dit qu'on a pas d'accès au démon Docker depuis l'intérieur :
 
 ```bash
 docker ps
@@ -272,11 +272,11 @@ docker build -t app:latest . && docker run app
 exec /usr/local/bin/hello: no such file or directory
 ```
 
-Ce message est trompeur : le fichier existe pourtant bel et bien dans l'image (copié depuis le stage builder). En y regardant de plus près, le stage 1 (compilation) utilise `debian:13`, basé sur **glibc**, tandis que le stage 2 (exécution finale) utilise `alpine:3.20`, basé sur **musl**.
+Ce message est trompeur : le fichier existe pourtant bel et bien dans l'image (copié depuis le stage builder). En y regardant de plus près, le stage 1 lors de la compilation utilise `debian:13`, basé sur **glibc**, tandis que le stage 2 lors du run utilise `alpine:3.20`, basé sur **musl**.
 
-Le binaire compilé et linké dynamiquement contre glibc dans le premier stage ne peut pas s'exécuter dans un environnement du second. D'où un message d'erreur qui semble indiquer un fichier manquant, alors qu'il s'agit en réalité d'un binaire incompatible avec l'environnement d'exécution.
+Le binaire compilé et linké dynamiquement contre glibc dans le premier stage ne peut pas s'exécuter dans l'environnement du second. D'où le message d'erreur qui indique un fichier manquant, alors que ça indique un binaire incompatible avec l'env du run.
 
-Aligner les deux stages sur la même base pour garantir la compatibilité libc — suggestion (avec l'aide d'une IA) d'utiliser `debian:13-slim` pour les deux étages plutôt que de mixer Debian et Alpine, permet d'avoir un multistage réparé :
+Il faut pour cela avoir un multistage mutualisé. On va donc modifier les images de façon à ce que dans le run chaque stage utilisent l'image `debian:13-slim` pour éviter les soucis :
 
 ```dockerfile
 # STAGE 1

@@ -1,5 +1,8 @@
+# 1 - Salta, Venice, Tarifa, Helsingør, Bharuch, Quito & Atlantis
+
 Challenges de troubleshooting Docker sur [SadServers](https://sadservers.com/scenarios/topic/docker).
-## ==Salta==
+
+### <mark style="color:$warning;">Salta</mark>
 
 **1.** Premier réflexe : lister les images et conteneurs existants :
 
@@ -43,7 +46,8 @@ docker run -d -p :8888 app
 ```
 
 Ici, aucun port hôte n'est mappé. Le conteneur écoute sur son port 8888 en interne uniquement, ce qui nous permet alors de taper dessus, et de récupérer le flag en faisait un "**curl localhost:8888**".
-## ==Venice==
+
+### <mark style="color:$warning;">Venice</mark>
 
 Pas de panne à corriger ici, plutôt un exercice d'identification : déterminer si l'environnement tourne dans un vrai conteneur Docker ou autre chose.
 
@@ -55,11 +59,11 @@ cat /proc/1/environ | tr "\0" "\n" | grep container
 
 Normalement `container=podman` dans ce cas précis (la valeur avait été modifiée dans le challenge pour corser l'exercice).
 
-Autre indicateur possible : l'absence de kernel threads (`[kthreadd]` par exemple) dans la liste des process, signe qu'on n'est pas dans un environnement avec son propre noyau complet. 
+Autre indicateur possible : l'absence de kernel threads (`[kthreadd]` par exemple) dans la liste des process, signe qu'on n'est pas dans un environnement avec son propre noyau complet.
 
-## ==Tarifa==
+### <mark style="color:$warning;">Tarifa</mark>
 
-Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheureseument. 
+Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheureseument.
 
 1er coup d'oeil dans les logs comme toujours :
 
@@ -67,15 +71,16 @@ Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheurese
 docker logs nginx_1
 ```
 
-```text
+```
 /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
 ```
 
 Le script d'entrypoint nginx tente de modifier un fichier de configuration mais le système de fichiers est monté en lecture seule à cet endroit. Il s'agit d'un volume Docker monté en `:ro` (read-only) là où l'image nginx attend de pouvoir écrire.
 
-[à compléter plus tard]
-## ==Helsingør==
+\[à compléter plus tard]
+
+### <mark style="color:$warning;">Helsingør</mark>
 
 **Contexte :** ce chall expose une réplication PostgreSQL primaire/replica via Docker Compose, où le replica refuse de démarrer.
 
@@ -83,7 +88,7 @@ Le script d'entrypoint nginx tente de modifier un fichier de configuration mais 
 docker compose ps
 ```
 
-```text
+```
 postgres-db-master    Up 2 minutes (healthy)
 postgres-db-replica   Restarting (1) 35 seconds ago
 ```
@@ -94,13 +99,14 @@ Le replica boucle en restart. Hop dans les logs :
 docker compose logs postgres-db-replica
 ```
 
-```text
+```
 FATAL: recovery aborted because of insufficient parameter settings
 DETAIL: max_connections = 80 is a lower setting than on the primary server, where its value was 100.
 ```
 
 PostgreSQL refuse le démarrage du replica car certains paramètres de configuration sont inférieurs à ceux du primaire — une contrainte stricte de la réplication physique PostgreSQL.
-### Première tentative : corriger max_connections
+
+#### Première tentative : corriger max\_connections
 
 Un recherche Google qui confirme la piste (fichier `postgresql.conf`) :
 
@@ -118,20 +124,20 @@ docker compose up -d
 
 Toujours en échec, mais avec une **erreur différente** cette fois :
 
-```text
+```
 DETAIL: max_worker_processes = 4 is a lower setting than on the primary server, where its value was 8.
 ```
 
 Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être alignés sur (ou au-dessus) des valeurs du primaire, chacun révélé un par un après correction du précédent :
 
-- `max_connections` → 100
-- `max_worker_processes` → 10 (le primaire était à 8)
-- `max_wal_senders` → 10 (le primaire était à 10)
-- `max_locks_per_transaction` → 64 (le primaire était à 64)
+* `max_connections` → 100
+* `max_worker_processes` → 10 (le primaire était à 8)
+* `max_wal_senders` → 10 (le primaire était à 10)
+* `max_locks_per_transaction` → 64 (le primaire était à 64)
 
-Puis le compose a pu relancer le service correctement sans autre erreur. 
-Ce qui résout le challenge.
-## ==Bharuch==
+Puis le compose a pu relancer le service correctement sans autre erreur. Ce qui résout le challenge.
+
+### <mark style="color:$warning;">Bharuch</mark>
 
 On à affaire ici à un conteneur qui boucle en erreur immédiatement au lancement.
 
@@ -153,7 +159,8 @@ Trouvé, mais accès refusé sans sudo, puis erreur différente une fois en sudo
 sudo python3 /var/lib/docker/overlay2/.../app/app.py
 # ModuleNotFoundError: No module named 'flask'
 ```
-### La vraie cause : mismatch d'architecture CPU
+
+#### La vraie cause : mismatch d'architecture CPU
 
 Une recherche Google indique que `exec /bin/sh: exec format error` correspond à un problème d'architecture. En inspectant l'image avec un grep :
 
@@ -164,8 +171,9 @@ uname -a
 # ... x86_64 GNU/Linux
 ```
 
-L'image a été buildée pour ARM64, alors que l'hôte tourne en x86_64 : le binaire ne peut tout simplement pas s'exécuter nativement.
-### Solution
+L'image a été buildée pour ARM64, alors que l'hôte tourne en x86\_64 : le binaire ne peut tout simplement pas s'exécuter nativement.
+
+#### Solution
 
 Plutôt que de reconstruire l'image pour la bonne architecture (plus long), utilisation de l'émulation QEMU pour permettre l'exécution multi-architecture sur l'hôte :
 
@@ -174,7 +182,8 @@ docker run --rm -d --privileged multiarch/qemu-user-static --reset -p yes
 ```
 
 Ce qui résout le challenge.
-## ==Quito==
+
+### <mark style="color:$warning;">Quito</mark>
 
 **Objectif :** piloter le conteneur `nginx` (le démarrer) depuis un autre conteneur, `docker-access`.
 
@@ -182,7 +191,7 @@ Ce qui résout le challenge.
 docker ps -a
 ```
 
-```text
+```
 nginx           Exited (137) 10 months ago
 docker-access    Exited (137) 14 seconds ago
 ```
@@ -194,7 +203,7 @@ docker start docker-access
 docker exec -ti docker-access sh
 ```
 
-### Premier blocage : pas d'accès au démon Docker depuis l'intérieur
+#### Premier blocage : pas d'accès au démon Docker depuis l'intérieur
 
 ```bash
 docker ps
@@ -231,7 +240,7 @@ docker ps
 # nginx bien Up
 ```
 
-### Point de vigilance : lancer en root
+#### Point de vigilance : lancer en root
 
 Le conteneur avait été lancé en root pour que ça fonctionne, ce qui n'est pas idéal côté sécurité (accès complet au démon Docker de l'hôte depuis un conteneur root équivaut quasiment à un accès root sur l'hôte lui-même). Meilleure approche à privilégier la prochaine fois plutôt que `--user root` :
 
@@ -244,7 +253,8 @@ docker run -it --rm \
 ```
 
 Cette approche ajoute le GID du groupe `docker` de l'hôte au conteneur, permettant d'utiliser le socket sans donner un accès root complet.
-## ==Atlantis==
+
+### <mark style="color:$warning;">Atlantis</mark>
 
 **Objectif :** builder et lancer un conteneur "app" à partir d'un Dockerfile multi-stage :
 
@@ -270,7 +280,7 @@ docker build -t app:latest . && docker run app
 exec /usr/local/bin/hello: no such file or directory
 ```
 
-Ce message est trompeur : le fichier existe pourtant bel et bien dans l'image (copié depuis le stage builder). En y regardant de plus près, le stage 1 (compilation) utilise `debian:13`, basé sur **glibc**, tandis que le stage 2 (exécution finale) utilise `alpine:3.20`, basé sur **musl**. 
+Ce message est trompeur : le fichier existe pourtant bel et bien dans l'image (copié depuis le stage builder). En y regardant de plus près, le stage 1 (compilation) utilise `debian:13`, basé sur **glibc**, tandis que le stage 2 (exécution finale) utilise `alpine:3.20`, basé sur **musl**.
 
 Le binaire compilé et linké dynamiquement contre glibc dans le premier stage ne peut pas s'exécuter dans un environnement du second. D'où un message d'erreur qui semble indiquer un fichier manquant, alors qu'il s'agit en réalité d'un binaire incompatible avec l'environnement d'exécution.
 

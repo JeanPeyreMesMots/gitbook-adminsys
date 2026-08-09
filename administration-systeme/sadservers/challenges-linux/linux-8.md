@@ -7,7 +7,7 @@ ps faux | grep "caddy"
 # /usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
 ```
 
-Sa conf reste simple, en reverse proxy vers un backend local :
+Sa conf reste simple, un reverse proxy vers un backend local :
 
 ```caddyfile
 :80 {
@@ -31,7 +31,7 @@ journalctl -u caddy.service -e
 # server running, protocols h1/h2/h3
 ```
 
-Un warning est présent sur le formatage du Caddyfile (`caddy fmt --overwrite`). Côté systemd, une deuxième existe mais est désactivée :
+Un warning est présent dans le Caddyfile (`caddy fmt --overwrite`). Côté systemd, une deuxième existe mais est désactivée :
 
 ```bash
 caddy-api.service   disabled  enabled

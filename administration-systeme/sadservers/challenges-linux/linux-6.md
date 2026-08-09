@@ -189,7 +189,7 @@ sudo chmod 644 /usr/local/share/ca-certificates/webappCA.crt
 sudo update-ca-certificates
 ```
 
-On yest :
+On test :
 
 ```bash
 curl https://webapp:7000

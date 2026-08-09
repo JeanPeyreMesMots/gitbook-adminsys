@@ -1,4 +1,6 @@
-## Geneva
+# 1 - Geneva, Tokyo, Marseille, Paris
+
+### <mark style="color:$warning;">Geneva</mark>
 
 **Objectif :** renouveler un certificat SSL nginx expiré.
 
@@ -10,7 +12,7 @@ echo | openssl s_client -connect localhost:443 2>/dev/null | openssl x509 -noout
 # notAfter=Feb 29 16:52:24 2024 GMT
 ```
 
-Date d'expiration antérieure à la date de début (`notAfter` 2024 alors que `notBefore` est 2025). Le certificat est clairement expiré.
+La date d'expiration est antérieure à la date du début (`notAfter` 2024 alors que `notBefore` est 2025). Le certificat est clairement expiré.
 
 Dans la conf nginx les certificats sont stockés ici :
 
@@ -19,7 +21,7 @@ ssl_certificate /etc/nginx/ssl/nginx.crt;
 ssl_certificate_key /etc/nginx/ssl/nginx.key;
 ```
 
-On génère alors nouveau certificat auto-signé, avec une commande suggérée par Perplexity. On ajuste ensuite pour cibler les bons chemins :
+On génère alors nouveau certificat auto-signé, avec la commande suivante en ciblant les bons chemins :
 
 ```bash
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -29,7 +31,8 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```
 
 Ce qui résout le chall :)
-## Tokyo
+
+### <mark style="color:$warning;">Tokyo</mark>
 
 **Contexte :** Apache tourne, semble en bonne santé, mais reste injoignable.
 
@@ -40,7 +43,7 @@ sudo systemctl status apache2
 
 On déroule la méthodologie suivante, de la mine d'or qu'est le blog de Stephane Robert :
 
-https://blog.stephane-robert.info/docs/services/web/apache/#d%C3%A9pannage-express
+* https://blog.stephane-robert.info/docs/services/web/apache/#d%C3%A9pannage-express
 
 On vérifie les permissions du fichier servi par précaution :
 
@@ -64,7 +67,7 @@ sudo apache2ctl configtest
 
 Et les logs ne remontent rien d'anormal.
 
-### La vraie cause : iptables
+La vraie cause demeure en fait toujours le même truc que **SadServers** répète parfois, ce qui est un peu répétitif : iptables et une règle DROP qui foire tout
 
 ```bash
 iptables -L
@@ -72,14 +75,15 @@ Chain INPUT (policy ACCEPT)
 DROP  tcp  --  anywhere  anywhere  tcp dpt:http
 ```
 
-Une règle DROP explicite bloque tout le trafic entrant sur le port HTTP. Suppression :
+On supprime :
 
 ```bash
 sudo iptables -D INPUT 1
 ```
 
 Résolu.
-## Marseille
+
+### <mark style="color:$warning;">Marseille</mark>
 
 **Contexte :** une stack LAMP (Apache + PHP-FPM) sous Rocky Linux, qui échoue à traiter les requêtes PHP.
 
@@ -117,9 +121,7 @@ sudo systemctl reload httpd
 curl localhost | head -n1
 ```
 
-### Round 2 : SELinux bloque la connexion réseau du process Apache
-
-Si le port est corrigé, la requête n'aboutit toujours pas correctement (réponse tronquée). On eput déjà tester en désactivant temporairement SELinux (uniquement pour confirmer le diagnostic, pas comme solution finale — l'objectif étant de comprendre et corriger la policy plutôt que de désactiver la protection) :
+Si le port est corrigé, la requête retourne mal la réponse. On peut déjà tester en désactivant temporairement SELinux pour juste confirmer le diagnostic, pour déjà comprendre et corriger la policy plutôt que de désactiver la protection :
 
 ```bash
 sudo setenforce 0
@@ -133,12 +135,12 @@ Cela confirme que SELinux était bien en cause. On recherche la règle exacte bl
 sudo ausearch -m avc -ts recent | grep denied
 ```
 
-```text
+```
 avc: denied { name_connect } for pid=1970 comm="httpd" dest=9000
 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_port_t:s0 tclass=tcp_socket
 ```
 
-La policy SELinux par défaut interdit à Apache (`httpd_t`) d'initier des connexions réseau sortantes vers d'autres process (`name_connect`) — ici vers PHP-FPM en écoute sur le port 9000. Une soluce propre est d'activer le booléen SELinux dédié plutôt qu'en désactivant SELinux globalement :
+La policy SELinux par défaut interdit à Apache (`httpd_t`) les connexions sortantes vers d'autres process (`name_connect`), en l'occurrence ici vers PHP-FPM en écoute sur le 9000. Une soluce propre est d'activer le booléen SELinux dédié, plutôt qu'en désactivant SELinux globalement :
 
 ```bash
 sudo setsebool -P httpd_can_network_connect on
@@ -148,69 +150,3 @@ curl localhost | head -n1
 ```
 
 Résolu, SELinux est réactivé et laissé en enforcing.
-
-## Paris :
-
-_(Note prise sous forme de résumé condensé plutôt que de log détaillé — les commandes exactes et sorties n'ont pas été conservées. Tout est reconstituées en batch.)_
-
-Un challenge assez basique qui suit l'ordre suivant : 
-
-vérif de la conf d'apahce > .htpasswd > hash dedans, le cracker avec john
-puis basic auth avec le mdp sur le localhost avec les identitants > s'apercevoir que y'a un endpoint /webfile > 
-on le le dl puis on le met dans /home/admin > file sur le type de fichier > s'apercevoir que c'est une archive zip > mot de passe requis > 
-on tente une unzip2john dessus > on obtiens un hash, le cracker avec john > on obtiens le mdp > on dézipper avec le mot de passe > cat secret.txt > ce qui nous donne le flag
-
-### En reformulé :
-
-Inspection de la configuration Apache, qui révèle une protection par authentification basique reposant sur un fichier `.htpasswd` :
-
-```bash
-cat /etc/apache2/sites-enabled/*.conf
-# AuthType Basic, AuthUserFile /etc/apache2/.htpasswd
-cat /etc/apache2/.htpasswd
-# utilisateur:hash
-```
-
-On crack le hash avec John the Ripper
-
-```bash
-john /etc/apache2/.htpasswd
-john --show /etc/apache2/.htpasswd
-```
-
-Mot de passe récupéré. On l'utilise pour se co ensuite sur l'instance locale :
-
-```bash
-curl -u utilisateur:motdepasse http://localhost/
-```
-
-Accès à la zone protégée, qui laisse apparaître un endpoint jusque-là inconnu, `/webfile`. On le dl puis on le place dans le home :
-
-```bash
-curl -u utilisateur:motdepasse http://localhost/webfile -o webfile
-mv webfile /home/admin/
-```
-
-Sauf que le fichier n'a pas d'extension. On vérifie sa nature réelle :
-
-```bash
-file webfile
-# Zip archive data
-```
-
-Une archive ZIP protégée par mot de passe ! On en extrait le hash du ZIP puis on le crack avec John The Ripper :
-
-```bash
-unzip2john webfile > webfile.hash
-john webfile.hash
-john --show webfile.hash
-```
-
-Mot de passe de l'archive récupéré. On l'utilise pour extraire l'archive et lire le résultat :
-
-```bash
-unzip -P motdepasse webfile
-cat secret.txt
-```
-
-Résolu.

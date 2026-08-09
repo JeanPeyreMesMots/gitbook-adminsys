@@ -1,6 +1,6 @@
 # 3 - Kortenberg, Manhattan & Cape Town
 
-### Kortenberg
+### <mark style="color:$warning;">Kortenberg</mark>
 
 **Le problème :** impossible de créer quoi que ce soit dans le home, ni fichier ni dossier accessible.
 
@@ -81,7 +81,7 @@ source .bashrc
 
 Résolu.
 
-### Manhattan
+### <mark style="color:$warning;">Manhattan</mark>
 
 **Le problème :** PostgreSQL ne se connecte plus, locales qui semblent cassées au passage.
 
@@ -91,8 +91,6 @@ sudo -u postgres psql
 # ...
 # psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
 ```
-
-#### Fausse piste : les locales
 
 Le warning sur les locales m'a fait partir sur cette piste en premier :
 
@@ -111,8 +109,6 @@ Je régénére les locales, mais le problème persiste :
 sudo -u postgres psql
 # psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
 ```
-
-#### La vraie piste
 
 J'ai fait une petite recherche Google sur l'erreur de socket, puis suis tombé sur un article mentionnant qu'il rencontrait ce problème en restaurant une base de prod trop lourde, faute d'espace disque suffisant. Le mot "**espace**" justement m'a fait tilt, d'autant que le challenge portait le tag "**disk volumes**". On prend le poul de l'espace :
 
@@ -172,7 +168,7 @@ sudo -u postgres psql -c "insert into persons(name) values ('jane smith');" -d d
 
 Résolu.
 
-### Cape Town
+### <mark style="color:$warning;">Cape Town</mark>
 
 **Le problème :** nginx down avec une erreur de syntaxe, puis une deuxième panne différente une fois la première réglée.
 
@@ -275,4 +271,3 @@ sudo systemctl restart nginx
 curl -I 127.0.0.1:80
 # HTTP/1.1 200 OK
 ```
-

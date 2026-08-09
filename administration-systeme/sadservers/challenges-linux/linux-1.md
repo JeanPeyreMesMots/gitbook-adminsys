@@ -1,6 +1,6 @@
 # 1 - Apia, Tokamachi, Yokohama & Fukuoka
 
-## Apia
+## <mark style="color:$warning;">Apia</mark>
 
 **Objectif :** un mot a été ajouté dans un fichier parmi une centaine, il faut le retrouver et fournir la solution sous forme de hash MD5.
 
@@ -42,7 +42,7 @@ md5sum /home/admin/solution
 
 Ce qui est bien le cas.
 
-## Tokamachi
+## <mark style="color:$warning;">Tokamachi</mark>
 
 **Objectif :** un writer doit envoyer des messages en continu dans un named pipe situé à (`/home/admin/namedpipe`), puis un reader les capture avec logs horodatés dans `/home/admin/reader.log`.
 
@@ -63,8 +63,6 @@ Le writer proposé par défaut par SadServers n'a lui aucun délai :
 /bin/bash -c 'while true; do echo "this is a test message being sent to the pipe" > /home/admin/namedpipe; done' &
 ```
 
-### Essais ratés
-
 J'ai d'abord essayé de corriger la syntaxe du writer comme suggéré, avec un `sleep 3` :
 
 ```bash
@@ -79,8 +77,6 @@ Mais ça ne marchait pas. On peut tenter une indentation et un `2>/dev/null` :
 
 Mais ça rend le log vide, et SadServers n'acceptait pas la solution.
 
-### Ce qui a marché
-
 Après avoir tué l'ancien processus writer (`ps` + `grep "pipe"` pour trouver le PID, puis `kill`), la commande qui a fonctionné utilise `nohup` :
 
 ```bash
@@ -91,7 +87,7 @@ nohup /bin/bash -c 'while true; do echo "this is a test message being sent to th
 
 source : [zonetuto.fr](https://zonetuto.fr/shell-bash/nohup-lancer-un-script-en-arriere-plan-sur-un-serveur-linux/)
 
-## Yokohama
+## <mark style="color:$warning;">Yokohama</mark>
 
 **Objectif :** gestion de permissions pour 4 users (**abe**, **betty**, **carlos**, **debora**) :
 
@@ -179,7 +175,7 @@ lsattr *
 --------------e------- project_debora
 ```
 
-## Fukuoka
+## <mark style="color:$warning;">Fukuoka</mark>
 
 **Objectif :** un serveur nginx renvoie une 404 par défaut au lieu de servir un fichier avec le message _"Welcome to the Real Site!"_.
 

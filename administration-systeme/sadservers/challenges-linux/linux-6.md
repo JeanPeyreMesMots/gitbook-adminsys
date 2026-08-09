@@ -1,6 +1,6 @@
 # 6 - Paris, Manado & Moyogalpa
 
-### Paris
+### <mark style="color:$warning;">Paris</mark>
 
 Un peu de hacking, comme au bon vieux temps :D
 
@@ -24,8 +24,6 @@ Unauthorized
 ```
 
 Réponse 200 mais contenu "Unauthorized" — donc pas une vraie 401, l'appli gère l'auth elle-même dans le corps de la réponse.
-
-#### Tentative brute-force sur des creds classiques
 
 Petit script bash pour tester une liste de couples login/mdp courants (admin:admin, root:root, guest:guest, etc.) :
 
@@ -66,7 +64,7 @@ echo "FDZPmh5AX3oiJt" > ~/mysolution
 
 Confirmé :)
 
-### Manado
+### <mark style="color:$warning;">Manado</mark>
 
 _(Note prise rapidement, à détailler plus tard)_
 
@@ -108,7 +106,7 @@ ll
 cp names_COPY.xz solution/
 ```
 
-### Moyogalpa
+### <mark style="color:$warning;">Moyogalpa</mark>
 
 **Contexte :** une appli en Go sécurisée par John et Mike, cassée par eux. Le chall nous donne un cahier des charges :
 

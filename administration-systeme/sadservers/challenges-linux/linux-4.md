@@ -1,6 +1,6 @@
 # 4 - Oaxaca, Melbourne & Lisbon
 
-### Oaxaca
+### <mark style="color:$warning;">Oaxaca</mark>
 
 **Objectif :** fermer un fichier ouvert par un process, sans tuer ce process.
 
@@ -43,7 +43,7 @@ lsof -p 1037
 
 Le descripteur est fermé, avec le process bash toujours vivant. Plus simple que prévu au final.
 
-### Melbourne
+### <mark style="color:$warning;">Melbourne</mark>
 
 **Contexte :** une appli Python WSGI (`/home/admin/wsgi.py`) est censée sortir "**Hello, world!**", derrière Gunicorn, lui-même derrière nginx. Chaîne attendue : `curl → nginx → Gunicorn → wsgi.py`. Objectif : que `curl localhost` renvoie bien "Hello, world!".
 
@@ -151,7 +151,7 @@ curl http://localhost
 # Hello, world!
 ```
 
-### Lisbon
+### <mark style="color:$warning;">Lisbon</mark>
 
 **Contexte :** serveur etcd avec, en apparence, un problème de certificat SSL.
 

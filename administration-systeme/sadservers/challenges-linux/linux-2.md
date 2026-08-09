@@ -1,6 +1,6 @@
 # 2 - Rio de Janeiro, Nuuk, Cairo & Alexandria
 
-## Rio de Janeiro
+## <mark style="color:$warning;">Rio de Janeiro</mark>
 
 Il faut aussi débug du Jenkins. Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre ⇒ status en stopped.
 
@@ -68,7 +68,7 @@ curl -s localhost:8888/login | grep Jenkins | head -n1
 
 On nous renvoi un "**Sign in - Jenkins**", l'interface web est donc accessible. Challenge résolu.
 
-## Nuuk
+## <mark style="color:$warning;">Nuuk</mark>
 
 Le titre du chall me rappel **SSHNuke**, référence à Matrix :P
 
@@ -100,7 +100,7 @@ admin@i-0a31a7ab947fad896:~$
 
 Connexion réussie.
 
-## Cairo
+## <mark style="color:$warning;">Cairo</mark>
 
 **Contexte :** un script de health check critique (`/opt/scripts/health.sh`) est censé tourner toutes les 10 secondes via un timer systemd :
 
@@ -276,7 +276,7 @@ agent/check.sh
 
 Résolu !
 
-## Alexandria
+## <mark style="color:$warning;">Alexandria</mark>
 
 **Contexte :** un job de backup cron mal configuré.
 

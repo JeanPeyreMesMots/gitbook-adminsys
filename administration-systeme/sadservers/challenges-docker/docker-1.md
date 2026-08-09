@@ -4,20 +4,20 @@ Challenges de troubleshooting Docker sur [SadServers](https://sadservers.com/sce
 
 ### <mark style="color:$warning;">Salta</mark>
 
-**1.** Premier réflexe : lister les images et conteneurs existants :
+Premier réflexe : lister les images et conteneurs existants :
 
 ```bash
 sudo docker images
 sudo docker ps -a
 ```
 
-**2.** On consulte aussi les logs du conteneur concerné :
+On consulte aussi les logs du conteneur concerné :
 
 ```bash
 docker logs container_name
 ```
 
-**3.** La cause : une coquille dans le `Dockerfile`, ligne `CMD` — `serve.js` au lieu de `server.js`. Correction et rebuild depuis `/home/admin/app` :
+La cause : une coquille dans le `Dockerfile`, ligne `CMD` — `serve.js` au lieu de `server.js`. Correction et rebuild depuis `/home/admin/app` :
 
 ```bash
 docker build -t app .
@@ -29,9 +29,9 @@ docker build -t app .
 docker run -d app node server.js
 ```
 
-**4.** En voulant vérifier le port exposé attendu par le conteneur, j'ai remarqué que le serveur nginx tournait déjà sur le même port sur l'hôte, il faut l'arrêter avant de relancer le conteneur.
+En voulant vérifier le port exposé attendu par le conteneur, j'ai remarqué que le serveur nginx tournait déjà sur le même port sur l'hôte, il faut l'arrêter avant de relancer le conteneur.
 
-**5.** Dernier ajustement : dans le `Dockerfile`, la ligne `EXPOSE` déclarait le port `8880` au lieu de `8888`. On corrige puis on rebuild, puis :
+Dernier ajustement : dans le `Dockerfile`, la ligne `EXPOSE` déclarait le port `8880` au lieu de `8888`. On corrige puis on rebuild, puis :
 
 ```bash
 docker run -d -p 8888:8888 app
@@ -63,7 +63,7 @@ Autre indicateur possible : l'absence de kernel threads (`[kthreadd]` par exempl
 
 ### <mark style="color:$warning;">Tarifa</mark>
 
-Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheureseument.
+Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheureusement.
 
 1er coup d'oeil dans les logs comme toujours :
 
@@ -104,18 +104,14 @@ FATAL: recovery aborted because of insufficient parameter settings
 DETAIL: max_connections = 80 is a lower setting than on the primary server, where its value was 100.
 ```
 
-PostgreSQL refuse le démarrage du replica car certains paramètres de configuration sont inférieurs à ceux du primaire — une contrainte stricte de la réplication physique PostgreSQL.
-
-#### Première tentative : corriger max\_connections
-
-Un recherche Google qui confirme la piste (fichier `postgresql.conf`) :
+PostgreSQL refuse le démarrage du replica car le nombre de connexions sont inférieurs à celle du Postgres replica. Une recherche Google qui confirme la piste (fichier `postgresql.conf`) pour savoir où corriger le soucis :
 
 ```bash
 grep "max_co*" postgres.conf
 # max_connections = 100  # (change requires restart)
 ```
 
-On ajuste la valeur de max connections comme indiqué, puis :
+On ajuste la valeur de max connections comme indiqué, on reup les conteneurs :
 
 ```bash
 docker compose down
@@ -128,7 +124,7 @@ Toujours en échec, mais avec une **erreur différente** cette fois :
 DETAIL: max_worker_processes = 4 is a lower setting than on the primary server, where its value was 8.
 ```
 
-Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être alignés sur (ou au-dessus) des valeurs du primaire, chacun révélé un par un après correction du précédent :
+Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être égales ou au-dessus des valeurs du primaire, chacun révélé un par un après correction du précédent :
 
 * `max_connections` → 100
 * `max_worker_processes` → 10 (le primaire était à 8)
@@ -160,8 +156,6 @@ sudo python3 /var/lib/docker/overlay2/.../app/app.py
 # ModuleNotFoundError: No module named 'flask'
 ```
 
-#### La vraie cause : mismatch d'architecture CPU
-
 Une recherche Google indique que `exec /bin/sh: exec format error` correspond à un problème d'architecture. En inspectant l'image avec un grep :
 
 ```bash
@@ -173,9 +167,7 @@ uname -a
 
 L'image a été buildée pour ARM64, alors que l'hôte tourne en x86\_64 : le binaire ne peut tout simplement pas s'exécuter nativement.
 
-#### Solution
-
-Plutôt que de reconstruire l'image pour la bonne architecture (plus long), utilisation de l'émulation QEMU pour permettre l'exécution multi-architecture sur l'hôte :
+Plutôt que de reconstruire l'image pour la bonne architecture (plus long), on passe par QEMU pour permettre l'exécution multi-architecture sur l'hôte :
 
 ```bash
 docker run --rm -d --privileged multiarch/qemu-user-static --reset -p yes
@@ -196,14 +188,14 @@ nginx           Exited (137) 10 months ago
 docker-access    Exited (137) 14 seconds ago
 ```
 
-On démarrage le conteneur pilote "docker-access" puis on rentre dedans :
+On démarrage le conteneur pilote "**docker-access**" puis on rentre dedans :
 
 ```bash
 docker start docker-access
 docker exec -ti docker-access sh
 ```
 
-#### Premier blocage : pas d'accès au démon Docker depuis l'intérieur
+Cependant, ça nous dit qu'on a pas d'accès au démon Docker depuis l'intérieur :
 
 ```bash
 docker ps
@@ -213,10 +205,10 @@ Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docke
 
 Le conteneur n'a par défaut aucun accès au Docker de l'hôte. Il faut pour cela que :
 
-1. Le démon Docker tourne sur l'hôte.
-2. Le socket `/var/run/docker.sock` de l'hôte doit être monté dans le conteneur, avec les bonnes permissions.
+* le démon Docker tourne sur l'hôte
+* le socket `/var/run/docker.sock` de l'hôte doit être monté dans le conteneur, avec les bonnes permissions.
 
-On check côté hôte que le démon tourne bien :
+On check donc côté hôte que le démon tourne bien :
 
 ```bash
 systemctl status docker
@@ -240,9 +232,9 @@ docker ps
 # nginx bien Up
 ```
 
-#### Point de vigilance : lancer en root
+#### Point de vigilance sur le run en root
 
-Le conteneur avait été lancé en root pour que ça fonctionne, ce qui n'est pas idéal côté sécurité (accès complet au démon Docker de l'hôte depuis un conteneur root équivaut quasiment à un accès root sur l'hôte lui-même). Meilleure approche à privilégier la prochaine fois plutôt que `--user root` :
+Le conteneur avait été lancé en root pour que ça fonctionne, ce qui n'est pas idéal côté sécurité (accès complet au démon Docker de l'hôte depuis un conteneur root équivaut quasiment à un accès root sur l'hôte lui-même). La meilleure approche à privilégier la prochaine fois plutôt que `--user root` :
 
 ```bash
 docker run -it --rm \

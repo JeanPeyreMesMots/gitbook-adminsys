@@ -1,23 +1,23 @@
 ---
-description: Ma page de présentation
+description: Introducing myself
 ---
 
-# 👋 À propos de moi
+# 👋 About me
 
 <figure><img src=".gitbook/assets/stonks_gold.jpg" alt=""><figcaption></figcaption></figure>
 
-Bonjour à tous ! **JeanPeyreMesMots** (mon pseudo ; vrai nom Kostan), 25 ans, technicien informatique et aspirant sysadmin qui aime n'importe quoi qui a un moteur et 4 roues 😉 Les domaines de l'IT que j'adore le plus sont :
+Hi everyone ! **JeanPeyreMesMots** (it's a username; my real name is Kostan), 25 yo, IT Technician with more than 4+ years of experience, and a aspiring sysadmin who likes anything with an engine and four wheels 😉 Fields about IT I love the most are :
 
-* l'Administration Système
+* System Administration
 * OSINT
-* Cybersécurité
+* Cybersecurity
 * Cloud
-* Pentest Web
-* Sécurité Mobile
+* Web Pentesting
+* Mobile Security
 * Coding : Bash, Python, Powershell
 
-Vous trouverez ici tous mes articles, notes et recherches réalisés dans le cadre de ma reconversion professionnelle. Tout est en français pour l'instant, mais sera bientôt traduit, et d'autres contenus sont sur le point d'être ajoutés 😉
+You'll find all the articles, notes and writeups done in the case of my career transition. 😉
 
-Vous trouverez ici tous les liens vers mes profils sociaux, y compris les plateformes d'entraînement telles que SadServers et Root-Me :
+You'll also find all the links to my social medias pages, including training-platforms such as SadServers or Root-Me :
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)

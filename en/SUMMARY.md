@@ -1,8 +1,8 @@
 # Table of contents
 
-* [👋 À propos de moi](README.md)
+* [👋 About me](README.md)
 
-## 💻 Administration système
+## 💻 System administration
 
 * [🔍 Active Directory](administration-systeme/active-directory/README.md)
   * [💻 Découverte et mise en place](administration-systeme/active-directory/decouverte-et-mise-en-place/README.md)

@@ -10,7 +10,7 @@ On va donc monter le partage avec la commande "**net use**" sur la lettre **X:**
  net use X: \\mesmots.local\ADMINISTRATIF
 ```
 
-Le partage apparait alors  ENENENENENENENEN :
+Le partage apparait alors :
 
 <figure><img src="../../../.gitbook/assets/image (85).png" alt=""><figcaption></figcaption></figure>
 

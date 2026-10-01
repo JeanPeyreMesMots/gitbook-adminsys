@@ -15,7 +15,7 @@
     * [1 - Creating the environnement](administration-systeme/ansible/decouverte-et-mise-en-place/day-1-mise-en-place-de-lenvironnement.md)
     * [2 - Fleet managment, modules, playbooks and roles](administration-systeme/ansible/decouverte-et-mise-en-place/day-2-gestion-de-parc-modules-playbooks-et-roles.md)
     * [3 - Overcoming the fear of deployment](administration-systeme/ansible/decouverte-et-mise-en-place/day-3-eliminer-la-peur-du-deploiement.md)
-    * [4 - Deployment without interruption](administration-systeme/ansible/decouverte-et-mise-en-place/day-4-deploiement-sans-interruption.md)
+    * [4 - Zero-downtime deployment](administration-systeme/ansible/decouverte-et-mise-en-place/day-4-deploiement-sans-interruption.md)
 * [☁️ AWS](administration-systeme/aws/README.md)
   * [☁️ Introduction and setup](administration-systeme/aws/decouverte-et-mise-en-place/README.md)
     * [0 - Concepts and basic knowledge](administration-systeme/aws/decouverte-et-mise-en-place/0-formation-aws-gratuite.md)
@@ -24,9 +24,9 @@
     * [3 - EC2 and VPC](administration-systeme/aws/decouverte-et-mise-en-place/3-ec2-et-vpc.md)
     * [3.2 - EC2 and VPC (Pt. 2)](administration-systeme/aws/decouverte-et-mise-en-place/3-2-ec2-et-vpc.md)
     * [4 - ASG and ELB](administration-systeme/aws/decouverte-et-mise-en-place/4-asg-et-elb.md)
-    * [Bonus - Firing up a domain name](administration-systeme/aws/decouverte-et-mise-en-place/bonus-creation-nom-de-domaine.md)
+    * [Bonus - Registering up a domain name](administration-systeme/aws/decouverte-et-mise-en-place/bonus-creation-nom-de-domaine.md)
 * [🛠️ SadServers](administration-systeme/sadservers/README.md)
-  * [🐧 Challenges Linux](administration-systeme/sadservers/challenges-linux/README.md)
+  * [🐧 Linux Challenges](administration-systeme/sadservers/challenges-linux/README.md)
     * [1 - Apia, Tokamachi, Yokohama & Fukuoka](administration-systeme/sadservers/challenges-linux/linux-1.md)
     * [2 - Rio de Janeiro, Nuuk, Cairo & Alexandria](administration-systeme/sadservers/challenges-linux/linux-2.md)
     * [3 - Kortenberg, Manhattan & Cape Town](administration-systeme/sadservers/challenges-linux/linux-3.md)
@@ -43,12 +43,12 @@
   * [🌐 Challenges Web](administration-systeme/sadservers/challenges-web/README.md)
     * [1 - Geneva, Tokyo, Marseille, Paris](administration-systeme/sadservers/challenges-web/web-server.md)
 
-## 🧑‍🎓 Curses & Hands-on exercises
+## 🧑‍🎓 Courses & Hands-on exercises
 
-* [🔐 Pentesting wp-mobile-detector module](cours-and-tp-m1-cyber/pentest-wp-mobile-detector.md)
+* [🔐 Pentesting wp-mobile-detector plugin](cours-and-tp-m1-cyber/pentest-wp-mobile-detector.md)
 * [🔐 Patching a vulnerability](cours-and-tp-m1-cyber/correction-dune-vulnerabilite.md)
 
-## 💡 CTFs WriteUps
+## 💡 WriteUps
 
 * [📕 TryHackMe](ctfs-writeups/tryhackme/README.md)
   * [🇬🇧 \[EN\] 5up3r\_53cur3](ctfs-writeups/tryhackme/en-5up3r_53cur3.md)

@@ -4,19 +4,19 @@ description: Mise en place du serveur
 
 # 1 - Installation et configuration
 
-Dans un premier temps, on commence par installer Windows Server 2019 en local sur ma machine. Le choix de l'hyperviseur se porte sur VMWare, où je trouve qu'il est plus aisé de créer des sous-réseaux distincts et est plus efficace dans la gestion des ressources 🙂
+First, we install Windows Server 2019 locally on my machine. I chose VMware as the hypervisor, as I find it easier to create separate subnets and more efficient at managing resources 🙂
 
-On commence donc par récupérer l'ISO de Windows Server 2019 : [https://www.microsoft.com/fr-fr/evalcenter/download-windows-server-2019](https://www.microsoft.com/fr-fr/evalcenter/download-windows-server-2019)
+We start by downloading the Windows Server 2019 ISO: https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019
 
-Puis on l'installe en bare-metal sur la machine :
+Then we install it in a new VM:
 
 <figure><img src="../../../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
-Une fois l'install des VMWare Tools, du fullscreen ok... on a maintenant notre Windows Serveur installé :
+Once VMware Tools is installed and fullscreen works, we now have our Windows Server up and running:
 
 <figure><img src="../../../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
 
-Renommage du serveur en "**mesmots**", avec description "Serveur AD MesMots" :
+Renaming the server to "mesmots", with the description "Serveur AD MesMots":
 
 <figure><img src="../../../.gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
 

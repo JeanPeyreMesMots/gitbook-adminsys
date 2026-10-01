@@ -6,7 +6,7 @@ description: Introducing myself
 
 <figure><img src=".gitbook/assets/stonks_gold.jpg" alt=""><figcaption></figcaption></figure>
 
-Hi everyone ! **JeanPeyreMesMots** (it's a username; my real name is Kostan), 25 yo, IT Technician with more than 4+ years of experience, and a aspiring sysadmin who likes anything with an engine and four wheels 😉 Fields about IT I love the most are :
+Hi everyone ! **JeanPeyreMesMots** (it's a username; my real name is Kostan), 25 yo, IT Technician with more than 4 years of experience, and an aspiring sysadmin who likes anything with an engine and four wheels 😉 Fields about IT I love the most are :
 
 * System Administration
 * OSINT

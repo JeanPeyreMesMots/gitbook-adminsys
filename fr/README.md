@@ -18,6 +18,6 @@ Bonjour à tous ! **JeanPeyreMesMots** (mon pseudo ; vrai nom Kostan), 25 ans, t
 
 Vous trouverez ici tous mes articles, notes et recherches réalisés dans le cadre de ma reconversion professionnelle. Tout est en français pour l'instant, mais sera bientôt traduit, et d'autres contenus sont sur le point d'être ajoutés 😉
 
-Vous trouverez ici tous les liens vers mes profils sociaux, y compris les plateformes d'entraînement telles que SadServers et Root-Me TESTESTEST :
+Vous trouverez ici tous les liens vers mes profils sociaux, y compris les plateformes d'entraînement telles que SadServers et Root-Me :
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)

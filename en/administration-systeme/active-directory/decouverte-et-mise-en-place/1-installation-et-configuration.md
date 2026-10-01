@@ -1,12 +1,12 @@
 ---
-description: Mise en place du serveur
+description: Setting up the server
 ---
 
-# 1 - Installation et configuration
+# 1 - Installation and configuration
 
 First, we install Windows Server 2019 locally on my machine. I chose VMware as the hypervisor, as I find it easier to create separate subnets and more efficient at managing resources 🙂
 
-We start by downloading the Windows Server 2019 ISO: https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019
+We start by downloading the Windows Server 2019 ISO: [https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019](https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019)
 
 Then we install it in a new VM:
 
@@ -16,29 +16,29 @@ Once VMware Tools is installed and fullscreen works, we now have our Windows Ser
 
 <figure><img src="../../../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
 
-Renaming the server to "mesmots", with the description "Serveur AD MesMots":
+Renaming the server to "**mesmots**", with the description "Serveur AD MesMots":
 
 <figure><img src="../../../.gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
 
-### Création du domaine :
+### Creating the domain:
 
-La première étape étape, avant de créer le domaine Active Directory, consiste à installer le rôle "**ADDS**" : **Active Directory Domain Services**. Il s'agit du rôle permettant de créer un domaine Active Directory :
+The first step, before creating the Active Directory domain, is to install the "**ADDS**" role: **Active Directory Domain Services**. This is the role that allows us to create an Active Directory domain:
 
 <figure><img src="../../../.gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
 
-On pourvoie ensuite le serveur en DC, avec comme nom "**mesmots.local**" :
+We then promote the server to a DC, with the domain name "**mesmots.local**":
 
 <figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
 
-**Note :** Le nom de domaine NetBios sera **MESMOTS0**
+**Note:** the NetBIOS domain name will be **MESMOTS0**
 
-### Création des OU :
+### Creating the OUs:
 
-Une fois le domaine créé, on peut commencer à créer les OU demandés, avec l'arborescence suivante :
+Once the domain is created, we can start creating the requested OUs, with the following tree:
 
 <figure><img src="../../../.gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
 
-A la fin on retrouve donc les OU contenant les membres, assignés à chaque groupe :
+At the end we get the OUs containing the members, assigned to each group:
 
 ```rust
 mesmots.local
@@ -52,7 +52,7 @@ mesmots.local
     └── OU Ordinateurs
 ```
 
-De ce fait on se retrouve avec l'arborescence complète suivante. Avec chaque utilisateur appartenant à un groupe au format "**GRP\_CODIR**", "**GRP\_ADMIN**"... suivant le nom de l'OU :
+This gives us the following complete tree, with each user belonging to a group named "**GRP\_CODIR**", "**GRP\_ADMIN**"... depending on the name of the OU:
 
 ```rust
 mesmots.local
@@ -102,26 +102,26 @@ mesmots.local
 │       └── DN : OU=Ordinateurs,OU=MesMots,DC=mesmots,DC=local
 ```
 
-### Création du disque partagé
+### Creating the shared disk
 
-En voulant créer la hiérarchie des dossiers sur le serveur sur "**D:**", je me suis aperçu que ce dernier n'existait pas sur le serveur. Il faudra donc créer une partition dédiée, avec un disque dur virtuel.
+While trying to create the folder hierarchy on the server's "**D:**" drive, I realized it did not exist on the server. I therefore had to create a dedicated partition, using a virtual hard disk.
 
-J'ai donc créé un disque dur virtuel au format "**.vmdk**" sur VMWare du nom "**partage\_commun.vmdk**" :
+So I created a virtual hard disk in "**.vmdk**" format on VMware, named "**partage\_commun.vmdk**":
 
 <figure><img src="../../../.gitbook/assets/image (73).png" alt=""><figcaption></figcaption></figure>
 
-Une fois le disque créé on ouvre "**diskmgmt.msc"** sur l'AD, puis on peut le voir sur le serveur :
+Once the disk is created, we open "**diskmgmt.msc**" on the AD server, and the disk shows up:
 
 <figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-Le disque est ensuite monté en **D:/**. On y créé dessus un dossier nommé "**Partages**" et on peut ensuite y créer les dossiers avec leurs arborescences correspondant aux OU. En témoigne le listing du répertoire dessus :
+The disk is then mounted as **D:/**. We create a folder named "**Partages**" on it, and can then create the folders with their trees matching the OUs. Here is the directory listing:
 
 ```powershell
 PS C:\Users\Administrateur> cd D:\Partages
 PS D:\Partages> ls
 
 
-    Répertoire : D:\Partages
+    Répertoire : D:\Partages
 
 
 Mode                LastWriteTime         Length Name
@@ -135,7 +135,7 @@ d-----       15/04/2026     20:20                PEDAGOGIQUE
 PS D:\Partages> ls .\PEDAGOGIQUE\
 
 
-    Répertoire : D:\Partages\PEDAGOGIQUE
+    Répertoire : D:\Partages\PEDAGOGIQUE
 
 
 Mode                LastWriteTime         Length Name
@@ -143,89 +143,60 @@ Mode                LastWriteTime         Length Name
 d-----       15/04/2026     20:20                Profs
 ```
 
-Le disque est ensuite monté en **D:/** et on peut ensuite y créer les dossiers demandés avec leurs arborescences :
+The lab mentions **X:**, **P:**, etc. as drives mapped on the clients. Based on this model, I chose the following letters for each drive:
 
-```powershell
-PS C:\Users\Administrateur> cd D:\Partages
-PS D:\Partages> ls
+* **X:** = SMB share pointing to "**D:\Partages**" (root)
+* **P:** = SMB share pointing to "**D:\Users{Username}**"
 
+### Creating the share:
 
-    Répertoire : D:\Partages
-
-
-Mode                LastWriteTime         Length Name
-----                -------------         ------ ----
-d-----       15/04/2026     20:02                ADMINISTRATIF
-d-----       15/04/2026     20:02                COMMUN
-d-----       15/04/2026     20:02                DIRECTION
-d-----       15/04/2026     20:02                INFORMATIQUE
-d-----       15/04/2026     20:20                PEDAGOGIQUE
-
-PS D:\Partages> ls .\PEDAGOGIQUE\
-
-
-    Répertoire : D:\Partages\PEDAGOGIQUE
-
-
-Mode                LastWriteTime         Length Name
-----                -------------         ------ ----
-d-----       15/04/2026     20:20                Profs
-```
-
-Le TP me parle de **X:**, **P:**, etc. comme lecteurs mappés sur les clients. En partant de ce modèle, j'ai choisi que chaque lecteur portera les lettres suivantes :
-
-* **X:** = partage SMB qui pointe vers "**D:\Partages**" (racine)
-* **P:** = partage SMB qui pointe vers "**D:\Users{Username}**"
-
-### Création du partage :
-
-On peut d'abord voir que le rôle est déjà présent sur l'AD :
+We can first see that the role is already present on the AD server:
 
 <figure><img src="../../../.gitbook/assets/image (74).png" alt=""><figcaption></figcaption></figure>
 
-Dans l'assistant de création de partages de fichiers ici, on peut donc faire pointer vers "**D:/Partages**"
+In the file share creation wizard, we can point the share to "**D:/Partages**":
 
 <figure><img src="../../../.gitbook/assets/image (75).png" alt=""><figcaption></figcaption></figure>
 
-Le partage est créé, et il est maintenant visible dans la liste des partages :
+The share is created, and is now visible in the list of shares:
 
 <figure><img src="../../../.gitbook/assets/image (76).png" alt=""><figcaption></figcaption></figure>
 
-_Note : les permissions ont été laissés par défaut, car elles seront modifiées plus tard avec la méthode AGLP_
+_Note: permissions were left at their defaults, as they will be changed later using the AGLP method_
 
-### Définitions des permissions sur le partage :
+### Defining the share permissions:
 
-Le TP donnait un tableau des permissions à appliquer sur le partage, en fonction de chaque groupe, pour définir qui à accès à quoi. En voici les extraits :
+The lab provided a table of permissions to apply to the share, for each group, defining who has access to what. Here are extracts:
 
 <figure><img src="../../../.gitbook/assets/image (78).png" alt=""><figcaption></figcaption></figure>
 
-Ainsi que pour les autres groupes :
+And for the other groups:
 
 <figure><img src="../../../.gitbook/assets/image (79).png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../../../.gitbook/assets/image (80).png" alt=""><figcaption></figcaption></figure>
 
-Précision importante : chaque utilisateur est propriétaire (OWN) de son propre dossier uniquement. L'IT garde Lecture+Écriture sur tous pour maintenance.
+Important detail: each user is the owner (OWN) of their own folder only. IT keeps Read+Write on all folders for maintenance.
 
-Dans un premier temps, je créé un groupe global "**GG\_GRP\_ALL\_USERS**" qui regroupe tout les autres groupes d'utilisateur :
+First, I create a global group "**GG\_GRP\_ALL\_USERS**" that contains all the other user groups:
 
 <figure><img src="../../../.gitbook/assets/image (81).png" alt=""><figcaption></figcaption></figure>
 
-Puis on donne accès en lecture à ce groupe sur le dossier "**D:/Partages**" créé plus tôt. Cela nous permet d'avoir un accès SMB effectif, qui sera ensuite affiné avec les permissions NTFS :
+Then we grant this group read access on the "**D:/Partages**" folder created earlier. This gives us effective SMB access, which will then be refined with NTFS permissions:
 
 <figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-Les permissions NTFS sont définissables via un clique droit sur un sous dossier du partage "**D:/Partages**". Par exemple, pour définir la bonne permission sur le sous-dossier "COMMUN", on fait clique droit > Propriétés > Avancés en bas à droite :
+NTFS permissions can be set by right-clicking a subfolder of the "**D:/Partages**" share. For example, to set the right permission on the "COMMUN" subfolder, we right-click > Properties > Advanced at the bottom right:
 
 <figure><img src="../../../.gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
 
-Puis on peut y appliquer les permissions NTFS en ajoutant chaque groupe voulu, puis en cochant les cases de permissions :
+Then we can apply the NTFS permissions by adding each desired group and ticking the permission boxes:
 
 <figure><img src="../../../.gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../../../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
-On met donc proprement chaque permissions nécessaires à chaque groupe pour chaque dossiers. Ce qui donne le listing Powershell suivant des permissions de chaque dossiers ;) :
+So we properly set each required permission for each group on each folder. This gives the following PowerShell listing of the permissions of each folder ;) :
 
 ```ps1
 # Dossier : ADMINISTRATIF
@@ -264,56 +235,56 @@ GG_GRP_IT              Modify                       False
 GG_GRP_PROFS           Modify                 
 ```
 
-Chaque groupe possède alors granulairement les permissions qu'il lui fait pour accéder à chaque dossier. On s'assure donc de bien respecter les accès tels qu'ils sont définis dans le tableau des permissions.
+Each group therefore has, in a granular way, exactly the permissions it needs to access each folder. This ensures the access rights match the ones defined in the permissions table.
 
-### Configuration de la VM Windows 11 cliente et du réseau
+### Configuring the Windows 11 client VM and the network
 
-Maintenant que le serveur et que le partage sont en place, on peut créer une VM Windows 11 qui sera dans le même réseau local, pour simuler un poste client.
+Now that the server and the share are in place, we can create a Windows 11 VM on the same local network to simulate a client workstation.
 
-_Note : Pour permettre la jonction avec l'AD, il est essentiel de choisir la version "Pro"._
+_Note: to be able to join the AD domain, it is essential to choose the "Pro" edition._
 
-Une fois la VM installée, procède à un debloating de Windows via [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) pour libérer de la ressource sur ma machine et avoir un système plus léger :
+Once the VM is installed, I debloat Windows with [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) to free up resources on my machine and get a lighter system:
 
 <figure><img src="../../../.gitbook/assets/image (82).png" alt=""><figcaption></figcaption></figure>
 
-On définit ensuite l'adresse de l'AD en tant que serveur DNS, **192.186.1.100**, nécessaire afin de pouvoir bien communiquer ce dernier :
+We then set the AD server's address, **192.168.1.100**, as the DNS server, which is required to communicate properly with it:
 
 <figure><img src="../../../.gitbook/assets/image (98).png" alt=""><figcaption></figcaption></figure>
 
-On configure ensuite un réseau virtuel _**vmnet1**_ sous VMware afin d'établir une connexion pontée entre l'Active Directory et une VM Windows 11, avec une plage DHCP définie de **192.168.1.100 à 192.168.1.254** :
+Next, we configure a virtual network _**vmnet1**_ in VMware to set up a bridged connection between the Active Directory server and a Windows 11 VM, with a DHCP range from **192.168.1.100 to 192.168.1.254**:
 
 <figure><img src="../../../.gitbook/assets/image (83).png" alt=""><figcaption></figcaption></figure>
 
-Puis on installe le serveur DHCP, en nous aidant de ce guide :
+Then we install the DHCP server, following this guide (in French):
 
 [https://www.it-connect.fr/installer-et-configurer-un-serveur-dhcp-sous-windows-server-2019/](https://www.it-connect.fr/installer-et-configurer-un-serveur-dhcp-sous-windows-server-2019/)
 
-On remarque ensuite que 2 users sont créés dans le groupe :
+We then notice that 2 users have been created in the group:
 
 <figure><img src="../../../.gitbook/assets/image (88).png" alt=""><figcaption></figcaption></figure>
 
-On créé ensuite un pool DHCP. Dans cet exemple, l'AD a l'adresse IP "**192.168.1.100**" également configuré en statique dessus. Nous allons créer une étendue pour distribuer les adresses IP de **192.168.1.100** à **124**, soit 24 adresses IPv4. Soit le nombres d'employés de la boite fictive !
+We then create a DHCP pool. In this example, the AD server has the IP address "**192.168.1.100**", also configured statically on it. We will create a scope that distributes IP addresses from **192.168.1.100** to **124**, i.e. 24 IPv4 addresses, which is the number of employees of the fictional company!
 
-On lui donne un nom, pour le coup "**LAN\_MesMots**" :
+We give it a name, here "**LAN\_MesMots**":
 
 <figure><img src="../../../.gitbook/assets/image (90).png" alt=""><figcaption></figcaption></figure>
 
-On met ensuite le bail DHCP de l'AD à 8 jours, réaliste pour un réseau entreprise :
+We then set the DHCP lease to 8 days, which is realistic for a corporate network:
 
 <figure><img src="../../../.gitbook/assets/image (92).png" alt=""><figcaption></figcaption></figure>
 
-On remarques que l'opération a bien réussi en jetant un oeil aux logs sur le serveur : "**C:\Windows\System32\dhcp**"
+We can confirm the operation worked by looking at the logs on the server: "**C:\Windows\System32\dhcp**"
 
 ```powershell
 55,04/26/26,16:53:39,Autorisé (en service),,mesmots.local,,,0,6,,,,,,,,,0
 10,04/26/26,17:17:52,Assigner,192.168.1.101,WIN11-HOME-LAB.mesmots.local,000C29A1D0A3,,4172766725,0,,,,0x4D53465420352E30,MSFT 5.0,,,,0
 ```
 
-Quitte à aller jusqu'au bout on peut aussi bloquer l'IP pour le PC Windows 11 avec une nouvelle réservation :
+Since we might as well go all the way, we can also lock the IP for the Windows 11 PC with a new reservation:
 
 <figure><img src="../../../.gitbook/assets/image (95).png" alt=""><figcaption></figcaption></figure>
 
-On remarque ainsi que notre machine **WIN-11** récupère bien une IP + le FQDN du serveur associé :
+We can see that our **WIN-11** machine does get an IP + the FQDN of the associated server:
 
 ```powershell
 PS C:\WINDOWS\system32> ipconfig /all
@@ -327,16 +298,16 @@ Carte Ethernet Ethernet0 :
 
    Suffixe DNS propre à la connexion. . . : mesmots.local
    Adresse IPv4. . . . . . . . . . . . . .: 192.168.1.101(préféré)
-   Masque de sous-réseau. . . . . . . . . : 255.255.255.0
-   Bail obtenu. . . . . . . . . . . . . . : dimanche 26 avril 2026 17:17:52
-   Bail expirant. . . . . . . . . . . . . : lundi 4 mai 2026 17:17:52
-   Passerelle par défaut. . . . . . . . . : 192.168.1.254
+   Masque de sous-réseau. . . . . . . . . : 255.255.255.0
+   Bail obtenu. . . . . . . . . . . . . . : dimanche 26 avril 2026 17:17:52
+   Bail expirant. . . . . . . . . . . . . : lundi 4 mai 2026 17:17:52
+   Passerelle par défaut. . . . . . . . . : 192.168.1.254
    Serveur DHCP . . . . . . . . . . . . . : 192.168.1.100
    Serveurs DNS. . .  . . . . . . . . . . : 192.168.1.100
    NetBIOS sur Tcpip. . . . . . . . . . . : Activé
 ```
 
-Les deux machines se joignent correctement, le domaine répond bien sur 192.168.1.100.
+Both machines can reach each other, and the domain responds properly on 192.168.1.100.
 
 ```powershell
 PS C:\> ping mesmots.local
@@ -347,7 +318,7 @@ Réponse de 192.168.1.100 : octets=32 temps<1ms TTL=128
 Paquets : envoyés=4, reçus=4, perdus=0 (perte 0%)
 ```
 
-Puis le DNS inverse :
+Then the reverse DNS lookup:
 
 ```powershell
 PS C:\> nslookup 192.168.1.100
@@ -358,7 +329,7 @@ Serveur : UnKnown
 Address: 192.168.1.100
 ```
 
-Et l'authentification AD :
+And AD authentication:
 
 ```powershell
 PS C:\> nltest /dsgetdc:mesmots.local
@@ -372,4 +343,4 @@ Indicateurs : PDC GC DS LDAP KDC TIMESERV ...
 La commande a été correctement exécutée.
 ```
 
-Notre DC est donc bien détecté et joignable ! ✅
+Our DC is therefore properly detected and reachable! ✅

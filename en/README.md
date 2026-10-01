@@ -16,8 +16,6 @@ Hi everyone ! **JeanPeyreMesMots** (it's a username; my real name is Kostan), 25
 * Mobile Security
 * Coding : Bash, Python, Powershell
 
-You'll find all the articles, notes and writeups done in the case of my career transition. 😉
-
-You'll also find all the links to my social medias pages, including training-platforms such as SadServers or Root-Me :
+You'll find all the articles, notes and writeups done in the case of my career transition. 😉 You can also find all the links leading to my social medias pages here, including training-platforms such as SadServers or Root-Me :
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)

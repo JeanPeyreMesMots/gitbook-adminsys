@@ -1,8 +1,8 @@
 ---
-description: Mes premiers pas sur Active Directory :)
+description: My first steps on Active Directory :)
 ---
 
-# 💻 Découverte et mise en place
+# 💻 Introduction and setup
 
 Au départ, je ne connaissais pas du tout Active Directory. Je savais que c'était un serveur d'authentification LDAP pour les machines Windows en entreprise mais je n'avais jamais touché à quoi que ce soit dessus.&#x20;
 
@@ -27,36 +27,3 @@ Je devais me baser sur l'organigramme des services suivants :
 <figure><img src="../../../.gitbook/assets/image (71).png" alt=""><figcaption></figcaption></figure>
 
 Sans plus attendre commençons !
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

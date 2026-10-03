@@ -1,303 +1,218 @@
-# 3.2 - EC2 & VPC (Pt. 2)
+# 3 - EC2 & VPC
 
-### Résumé rapide
+#### VPC (Virtual Private Cloud)
 
-L'exercice suivant consistera à créer une instance **EC2**, y déployer une petite appli web sur un port personnalisé, en faire une image AMI custom, puis relancer une instance à partir de cette même AMI. Le tout entièrement en ligne de commande avec l'AWS CLI, car c'est plus rapide et pratique. On y appliquera ensuite un `userdata`, pour disposer d'une configuration similaire à n'importe quelle AMI de base.
+A VPC is a **virtual private** network: **private** because it is isolated, **virtual** because it coexists with those of every other AWS customer. A VPC is divided into **subnets**, each tied to an **Availability Zone** ("**AZ**"), which corresponds to one or more data centers in a given region (e.g. `eu-west-3a`, `eu-west-3b`, `eu-west-3c`).
 
-### AMI custom vs userdata : deux approches complémentaires
+A **region** contains several **AZs**, located in separate data centers. Two VPCs are fully isolated from each other: a development VPC has no impact on a production VPC. There are two kinds of subnets:&#x20;
 
-* Une **AMI custom** embarque directement tout ce qui est nécessaire : le code de l'application, le service déjà configuré pour démarrer automatiquement, et le port applicatif déjà accessible. Elle est rapide à démarrer, mais doit être régénérée à chaque changement de configuration.
-* Un script **userdata** permet, à l'inverse, d'appliquer la même configuration à une AMI générique (par exemple une image Ubuntu standard) au moment du démarrage de l'instance, ce qui la rend plus flexible et plus facile à maintenir, au prix d'un temps de démarrage un peu plus long. On va donc privilégier cette approche.
+\- **public subnets**: must be reachable from the Internet, like a web server
 
-### 1. Lister et supprimer les instances existantes
+\- **private subnets**: must not be reachable from the Internet, like a database.
 
-Avant de créer une nouvelle instance, les instances existantes sont listées :
+Network rules can let an application reach resources in a private subnet without exposing that subnet directly to the Internet.
 
-```bash
-aws ec2 describe-instances --profile myProfile | head -n 100
-```
+![](../../../.gitbook/assets/Pasted_image_20260604181744.png)
 
-Un extrait de la sortie permet de retrouver l'ID d'instance, le type d'instance, le security group associé, ainsi que les tags :
+#### EC2 (Elastic Compute Cloud)
 
-```bash
-$ aws ec2 describe-instances --profile myProfile | grep "Instance"
-            "Instances": [
-                        "InstanceMetadataTags": "disabled"
-                    "UsageOperation": "RunInstances",
-                    "CurrentInstanceBootMode": "uefi",
-                    "InstanceId": "i-0b77656d60b46bab1",
-                    "InstanceType": "t3.micro",
-```
+**EC2** is useful for anything that doesn't already exist "**as a service**" on AWS, such as an application, a container, a Python application server, etc. Conversely, when a managed service already covers the need (like a database), it is usually preferable to EC2.
 
-L'instance précédemment créée (id `i-0b77656d60b46bab1`) est ensuite terminée :
+EC2 works best with **disposable**, stateless instances: if a machine has a problem, you delete it and recreate it rather than repairing it. This approach enables a fully automated, reproducible infrastructure and faster deployments.
 
-```bash
-$ aws ec2 terminate-instances --profile myProfile --instance-ids i-0b77656d60b46bab1
-{
-    "TerminatingInstances": [
-        {
-            "InstanceId": "i-0b77656d60b46bab1",
-            "CurrentState": {"Code": 32, "Name": "shutting-down"},
-            "PreviousState": {"Code": 16, "Name": "running"}
-        }
-    ]
-}
-```
+#### Images (AMI: Amazon Machine Image)
 
-### 2. Création d'une nouvelle instance EC2 en CLI
+An **AMI** is a template used to launch instances, built from snapshots of a machine's volumes. Some are official (e.g. Ubuntu), maintained by their publisher and ready to launch.
 
-Une nouvelle instance, nommée `mcflurry-kostan`, doit être créée à partir de la même AMI Ubuntu que précédemment (`ami-091138d0f0d41ff90`), dans le security group déjà configuré `sg-0cfd8e43809678d1b`. Le détail de ce security group peut être consulté avec :
+You can also use custom images or build your own, for example to migrate an existing machine to the cloud. On the AWS Marketplace, some AMIs are paid, with the cost going to the publisher on top of the instance price.
 
-```bash
-$ aws --profile myProfile ec2 describe-security-groups
-```
+#### Instances
 
-On peut y voir le port 8000, déjà ouvert à tous :
+An instance is an EC2 virtual machine. Prices vary with the specs: for example, two instances can have the same number of cores but different amounts of RAM, sometimes for a similar price. The choice should therefore match the application's real needs (RAM, CPU usage, etc.).
 
-```bash
-"VpcId": "vpc-02a9f67924e244fe1",
-"SecurityGroupArn": "arn:aws:ec2:us-east-1:960583973458:security-group/sg-0cfd8e43809678d1b",
-"GroupName": "launch-wizard-1",
-"IpPermissions": [
-    {
-        "IpProtocol": "tcp",
-        "FromPort": 8000,
-        "ToPort": 8000,
-        "IpRanges": [
-            {
-                "Description": "Ouverture sur 8000 pour tout le monde",
-                "CidrIp": "0.0.0.0/0"
-            }
-        ]
-    }
-]
-```
+There are also **"burstable"** instances, whose baseline performance is limited but can be exceeded temporarily.
 
-> **Point important** : un security group doit obligatoirement se trouver dans le **même VPC** que le subnet visé.
+Example: the CPU can run at 100% for a limited time. When the instance uses less than its baseline for a while, it accumulates CPU credits that let it exceed its baseline later.
 
-Les subnets disponibles dans le VPC concerné sont donc listés au préalable :
+> A very useful site to compare all available instance types for a given need: [instances.vantage.sh](https://instances.vantage.sh/)
 
-```bash
-$ aws --profile myProfile ec2 describe-subnets \
-  --filters 'Name=vpc-id,Values=vpc-02a9f67924e244fe1' \
-  --query 'Subnets[*].[SubnetId,CidrBlock,AvailabilityZone,MapPublicIpOnLaunch]' \
-  --output table
-----------------------------------------------------------------------
-|                           DescribeSubnets                          |
-+---------------------------+------------------+-------------+-------+
-|  subnet-098df6a2925d1fca8 |  172.31.16.0/20  |  us-east-1c |  True |
-|  subnet-0008bd79a2ecf7a68 |  172.31.80.0/20  |  us-east-1b |  True |
-|  subnet-0b1bbada0f21af10e |  172.31.64.0/20  |  us-east-1f |  True |
-|  subnet-0f0b9308ad4d9d377 |  172.31.32.0/20  |  us-east-1d |  True |
-|  subnet-09d09309039b4b997 |  172.31.48.0/20  |  us-east-1e |  True |
-|  subnet-05388da4c4c8a241a |  172.31.0.0/20   |  us-east-1a |  True |
-+---------------------------+------------------+-------------+-------+
-```
+#### EBS volumes (Elastic Block Store)
 
-Le premier subnet de la liste est retenu, on créé l'instance suivante avec (avec la clé SSH `mcflurry-kostan` et son fichier `.pem` importé sur la VM Ubuntu locale) :
+Some instance types come with local "instance store" disks, but that storage is ephemeral: it is lost when the instance stops. For persistent storage that outlives the instance, AWS offers **EBS (Elastic Block Store)**, network volumes that can be moved from one instance to another.
 
-```bash
-aws --profile myProfile ec2 run-instances \
-  --image-id "ami-091138d0f0d41ff90" \
-  --instance-type t3.micro \
-  --key-name mcflurry-kostan \
-  --subnet-id subnet-098df6a2925d1fca8 \
-  --security-group-ids sg-0cfd8e43809678d1b \
-  --count 1
-```
+EBS volumes come in SSD and HDD types, billed by provisioned capacity, and for some types by provisioned IOPS. An EBS volume can be detached and attached to another instance.
 
-Après validation, l'instance apparaît bien dans la liste, à l'état "**running**" :
+> Note: you pay for the whole provisioned volume, even if the allocated space isn't fully used.
 
-```bash
-$ aws --profile myProfile ec2 describe-instances \
-  --query 'Reservations[*].Instances[*].[InstanceId,PrivateIpAddress,PublicIpAddress,State.Name,InstanceType,Placement.AvailabilityZone,Tags[?Key=="Name"].Value[0]]' \
-  --output text
+#### Security group (SG)
 
-i-0185cd42945adedf2     None    None    terminated      t3.micro        us-east-1c      None
-i-0c43b9365ca050097     172.31.21.197   54.164.35.204   running t3.micro        us-east-1c      None
-i-0ba4e0207fc7921c6     None    None    terminated      t3.micro        us-east-1c      None
-```
+A **security group** is a stateful virtual firewall applied to instances (more precisely, to their network interfaces). Its rules can be changed at any time, and it is free to use (within quotas).
 
-→ instance retenue : `i-0c43b9365ca050097`
+It spans AZs but is tied to a single VPC: instances in different AZs of the same VPC can share the same security group.
 
-### 3. Connexion et déploiement de l'application
+**SG** rules can allow traffic either from an IP range (CIDR) or from another **SG**, which is the recommended approach.
 
-On peut maintenant se connecter en SSH à la nouvelle instance, puis cloner le dépôt :
+Example: a database SG can allow port 3306 only from instances in the web servers' SG, which is more reliable than a list of fixed IP addresses.
+
+#### Elastic IP
+
+An Elastic IP gives a machine a fixed public IP, so it doesn't change on every stop/start. It becomes billable when it isn't attached to a running instance, to discourage needlessly reserving addresses from the scarce global IPv4 pool. Today, virtually all public IPv4 addresses on AWS are billed.
+
+#### Userdata
+
+A script run automatically at the machine's first boot, which is very handy to automate initial configuration. It is passed to the API Base64-encoded, its size is limited (16 KB), and it runs as root.
+
+#### Key pair
+
+SSH key pairs. You can import your own public key, which is then injected into the machine at boot for the image's default user.
+
+#### EBS snapshot
+
+A snapshot captures the state of an EBS volume at a given point in time. Snapshots are stored by AWS and can be used to restore a volume, or to create an **AMI** from which new instances can be launched.
+
+#### ENI (Elastic Network Interface)
+
+An **ENI** is a network interface that can be attached to or detached from an instance. An instance can have several network interfaces, up to a limit that depends on its instance type.
+
+This enables a form of **failover**: since an IP address is tied to a given interface, the interface can be moved to another instance if there's a problem. This does involve a short interruption during the switch.
+
+#### Spot instances
+
+* **Spot instances** use the compute capacity AWS isn't using at a given moment, offered at a steep discount. The catch: AWS can reclaim them at any time, with a two-minute warning, whenever it needs the capacity back!
+* Example: for a need of 10 web servers, you could run 5 of them as spot instances to cut costs. According to the course, interruptions remain relatively rare across a large number of instances, which makes spot well suited to workloads that can tolerate losing a machine.
+
+### Hands-on exercise
+
+#### 1. Launching an EC2 instance
+
+An instance is launched from an Ubuntu AMI:
+
+![](../../../.gitbook/assets/Pasted_image_20260605175138.png)
+
+The selected instance type is `t2.micro`, which is eligible for the Free Tier.
+
+We create a key pair for the SSH connection:
+
+![](../../../.gitbook/assets/Pasted_image_20260605175417.png)
+
+The instance is then created, and its public IP address is displayed:
+
+![](../../../.gitbook/assets/Pasted_image_20260605175927.png)
+
+It is in the expected subnet:
+
+![](../../../.gitbook/assets/Pasted_image_20260605180130.png)
+
+#### 2. SSH connection to the instance
+
+We connect with the `.pem` key generated earlier, as the default `ubuntu` user (which depends on the AMI):
 
 ```bash
-$ ssh -i mcflurry-kostan.pem ubuntu@54.164.35.204
+ssh ubuntu@52.207.223.54 -i cocadmin2.pem 
+The authenticity of host '52.207.223.54 (52.207.223.54)' can't be established.
+ED25519 key fingerprint is SHA256:HN/vOGjYe9c+zmuz/b7WOusO6NPn0Bu9eCtAgYw3WXQ.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '52.207.223.54' (ED25519) to the list of known hosts.
 Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-1004-aws x86_64)
 
-ubuntu@ip-172-31-21-197:~$ git clone https://github.com/ttwthomas/mcflurry
+ System information as of Fri Jun  5 16:06:19 UTC 2026
+
+  System load:  0.0               Temperature:           -273.1 C
+  Usage of /:   30.4% of 6.61GB   Processes:             116
+  Memory usage: 25%               Users logged in:       0
+  Swap usage:   0%                IPv4 address for ens5: 172.31.34.9
+
+ubuntu@ip-172-31-34-9:~$ 
+```
+
+#### 3. Opening an application port in the security group
+
+To make the application reachable on port 8000, we first identify the SG attached to the instance:
+
+![](../../../.gitbook/assets/Pasted_image_20260605181004.png)
+
+The security group here is `launch-wizard-1`:
+
+![](../../../.gitbook/assets/Pasted_image_20260605182010.png)
+
+The firewall rules are then edited to allow that port.
+
+> Although it's better to allow access from SGs rather than IP ranges, the simplest approach for this exercise is to open the port to all addresses via CIDR:
+
+![](../../../.gitbook/assets/Pasted_image_20260605182505.png)
+
+#### 4. Deploying the application on the instance
+
+The repository of the course's example application ("**mcflurry**") is cloned on the VM:
+
+```bash
+ubuntu@ip-172-31-34-9:~$ git clone https://github.com/ttwthomas/mcflurry
 Cloning into 'mcflurry'...
 remote: Enumerating objects: 131, done.
 remote: Counting objects: 100% (131/131), done.
 remote: Compressing objects: 100% (116/116), done.
+remote: Total 131 (delta 69), reused 36 (delta 14), pack-reused 0 (from 0)
+Receiving objects: 100% (131/131), 5.13 MiB | 44.91 MiB/s, done.
+Resolving deltas: 100% (69/69), done.
 ```
 
-### 4. Blocage Cloudflare
-
-L'application rencontre une erreur 403 lors de ses appels API. Après investigation, la cause n'est pas un problème de token d'authentification, mais un blocage **Cloudflare** : le site source (SkipTheDishes) applique une protection anti-bot qui rejette les requêtes ne provenant pas d'un navigateur réel. Le token utilisé par l'application est probablement toujours valide, mais la requête est bloquée par Cloudflare avant même d'atteindre l'API.
-
-Face à ce blocage, je change la page voulue en simple "**hello world**" en HTML exposée sur le port 1234 via Nginx, en remplacement de l'application complète :
-
-![](../../../.gitbook/assets/Pasted_image_20260608195746.png)
-
-Avec le copain Claude en backup toutefois :P Une règle de pare-feu correspondante est configurée sur AWS :
-
-![](../../../.gitbook/assets/Pasted_image_20260609174854.png)
-
-L'instance est donc lancée avec Nginx tapant sur le port 1234, testée d'abord en local puis via l'IP publique :
+Project contents once cloned:
 
 ```bash
-ubuntu@ip-172-31-29-20:~/mcflurry$ curl http://localhost:1234
-<h1>Hello World</h1> 
-ubuntu@ip-172-31-29-20:~/mcflurry$ curl http://3.91.185.214:1234
-<h1>Hello World</h1>
+ubuntu@ip-172-31-34-9:~/mcflurry$ ll
+total 96
+-rw-rw-r-- 1 ubuntu ubuntu    84 Jun  5 16:27 .env
+-rw-rw-r-- 1 ubuntu ubuntu   945 Jun  5 16:27 index.html
+-rw-rw-r-- 1 ubuntu ubuntu    39 Jun  5 16:27 index.js
+drwxrwxr-x 2 ubuntu ubuntu  4096 Jun  5 16:27 lambda/
+-rw-rw-r-- 1 ubuntu ubuntu 10473 Jun  5 16:27 main.py
+-rw-rw-r-- 1 ubuntu ubuntu  1791 Jun  5 16:27 map.js
+-rw-rw-r-- 1 ubuntu ubuntu  6948 Jun  5 16:27 mcdonalds-closed.png
+-rw-rw-r-- 1 ubuntu ubuntu  8031 Jun  5 16:27 mcdonalds-unavail.png
+-rw-rw-r-- 1 ubuntu ubuntu  8811 Jun  5 16:27 mcdonalds.png
+-rw-rw-r-- 1 ubuntu ubuntu  1446 Jun  5 16:27 postgres.py
+-rw-rw-r-- 1 ubuntu ubuntu   714 Jun  5 16:27 readme.md
+-rw-rw-r-- 1 ubuntu ubuntu   147 Jun  5 16:27 requirements.txt
+-rw-rw-r-- 1 ubuntu ubuntu  1439 Jun  5 16:27 server.py
+-rw-rw-r-- 1 ubuntu ubuntu  5173 Jun  5 16:27 styles.js
 ```
 
-> Le réseau universitaire utilisé (eduroam) pour les tests bloquait le port exposé. Le site [browser.lol](https://browser.lol/), un navigateur dans un navigateur, permet dans ce cas de tester l'accès depuis un réseau extérieur, ce qui est très pratique pour ce genre de vérification.
+> The machine's private IP address (`ip-172-31-34-9`) lets it communicate with, and be identified by, the other instances in the VPC.
 
-![](../../../.gitbook/assets/Pasted_image_20260611171758.png)
-
-### 5. Création d'une AMI à partir de l'instance configurée
-
-L'ID de l'instance à transformer en image est d'abord récupéré :
+Starting the application fails with a `KeyError: 'data'` error:
 
 ```bash
-aws --profile myProfile ec2 describe-instances \
-  --query 'Reservations[*].Instances[*].[InstanceId,PrivateIpAddress,PublicIpAddress,State.Name,InstanceType,Placement.AvailabilityZone,Tags[?Key=="Name"].Value[0]]' \
-  --output text
-
-i-05baafd242242ec4b     172.31.29.20    3.91.185.214    running t3.micro        us-east-1c    None
+ubuntu@ip-172-31-34-9:~/mcflurry$ PORT=8000 python3 main.py 
+Traceback (most recent call last):
+  File "/home/ubuntu/mcflurry/main.py", line 109, in <module>
+    restaurants = load_restaurants()
+  File "/home/ubuntu/mcflurry/main.py", line 82, in load_restaurants
+    restaurants = get_restaurants()
+  File "/home/ubuntu/mcflurry/main.py", line 49, in get_restaurants
+    for restaurant in req.json()["data"]["restaurantsList"]["openRestaurants"] :
+                      ~~~~~~~~~~^^^^^^^^
+KeyError: 'data'
 ```
 
-Puis on créé l'image à partir de cette même instance
+The error comes from an API key hardcoded in the application, dating from 2023 (when the course was recorded) and no longer valid.
 
-```bash
-aws --profile myProfile ec2 create-image \
-  --instance-id i-05baafd242242ec4b \
-  --name "AMI-McFlurry-2026-06-11" \
-  --description "AMI McFlurry"
-```
+Rather than getting stuck on this, I chose a simpler workaround: serving a basic page with Nginx or Apache as a proof of concept, to check that the public IP and the exposed port respond.
 
-→ AMI obtenue : `ami-0727c7aa82635c7c6`
+#### 5. Creating a snapshot and an AMI
 
-La progression de la création de l'image peut être suivie en consultant le snapshot EBS sous-jacent :
+A snapshot is created, then an AMI, to illustrate the backup mechanism:
 
-```bash
-# 1. Récupérer les snapshots liés à l'AMI
-aws --profile myProfile ec2 describe-images \
-  --image-ids ami-0727c7aa82635c7c6 \
-  --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId'
-[
-    "snap-039038f544198a2ef"
-]
+![](../../../.gitbook/assets/Pasted_image_20260605185023.png)
 
-# 2. Vérifier l'état du snapshot
-aws --profile myProfile ec2 describe-snapshots \
-  --snapshot-ids snap-039038f544198a2ef \
-  --query 'Snapshots[0].{State:State, Progress:Progress}'
-{
-    "State": "completed",
-    "Progress": "100%"
-}
-```
+Then we create the image here:
 
-### 6. Relance d'une instance à partir de l'AMI custom
+![](../../../.gitbook/assets/Pasted_image_20260605185342.png)
 
-L'instance ayant servi à créer l'image est d'abord terminée :
+And the snapshot appears in the corresponding list:
 
-```bash
-aws --profile myProfile ec2 terminate-instances --instance-ids i-05baafd242242ec4b
-```
+![](../../../.gitbook/assets/Pasted_image_20260605185513.png)
 
-Puis on créé une nouvelle instance à partir de l'AMI custom et la clé SSH pour s'y connecter :
+New instances can now be launched directly from this image. An AMI created from an already configured machine skips the whole configuration phase when a new instance boots.
 
-```bash
-aws --profile myProfile ec2 run-instances \
-  --image-id ami-0727c7aa82635c7c6 \
-  --instance-type t3.micro \
-  --count 1 \
-  --key-name mcflurry-kostan \
-  --security-group-ids sg-0cfd8e43809678d1b \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=mcflurry-instance}]'
-```
-
-On voit ainsi bien l'adresse IP de la nouvelle instance :
-
-```bash
-i-0f662bc75b1c1e4b9     None    None    terminated      t3.micro        us-east-1c
-i-01fec26f5dc98e17d     172.31.30.79    54.234.208.96   running t3.micro        us-east-1c
-```
-
-Le site est bien accessible directement, sans aucune configuration manuelle supplémentaire, puisque tout est déjà embarqué dans l'AMI custom :
-
-![](../../../.gitbook/assets/Pasted_image_20260611182806.png)
-
-### 7. Ajout du script userdata
-
-L'AMI custom fonctionne bien, mais elle doit être régénérée à chaque changement. L'objectif est donc de déplacer toute la configuration dans le script `userdata`:
-
-```bash
-#!/bin/bash
-
-# Mise à jour des paquets
-apt update -y
-
-# Installation de nginx
-apt install nginx -y
-
-# Changement du port 80 en 1234
-sed -i 's/listen 80/listen 1234/g' /etc/nginx/sites-available/default
-sed -i 's/listen \[::\]:80/listen [::]:1234/g' /etc/nginx/sites-available/default
-
-# Création de la page HTML
-echo "<h1>Hello World!</h1>" | tee /var/www/html/index.html
-
-# Test de la config et redémarrage nginx
-nginx -t && systemctl restart nginx
-
-# Vérification que le site répond
-curl http://localhost:1234 > /home/ubuntu/site-state.html
-```
-
-On créé une nouvelle instance en passant le script via l'option `--user-data` :
-
-```bash
-aws --profile myProfile ec2 run-instances \
-  --image-id ami-0727c7aa82635c7c6 \
-  --instance-type t3.micro \
-  --count 1 \
-  --key-name mcflurry-kostan \
-  --user-data file:///home/jpmm/Documents/aws-formation/ec2/userdata.sh \
-  --security-group-ids sg-0cfd8e43809678d1b \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=mcflurry-instance}]'
-```
-
-### 8. via le CLI (création du security group inclus)
-
-On créé un security group dédié depuis zéro :
-
-```bash
-aws ec2 create-security-group --group-name mcflurry --description "mcflurry"
-```
-
-Et on ouvre les ports 22 (SSH) et 1234 (applicatif) :
-
-```bash
-aws ec2 authorize-security-group-ingress --group-id sg-090e568fe9800aed2 \
-  --protocol tcp --port 22 --cidr 0.0.0.0/0
-aws ec2 authorize-security-group-ingress --group-id sg-090e568fe9800aed2 \
-  --protocol tcp --port 1234 --cidr 0.0.0.0/0
-```
-
-> Il n'est pas possible de pinger la machine par défaut, car le protocole ICMP n'est pas ouvert automatiquement, même lorsque d'autres ports le sont. Il faut ajouter explicitement une règle ICMP personnalisée pour autoriser le ping.
-
-### Logs utiles en cas de debug
-
-En cas de problème avec un script userdata, les logs se trouvent dans :
-
-```bash
-/var/log/cloud-init.log
-```
+> Infrastructure as Code (IaC) note: Packer, combined with Ansible, can fully automate building an AMI: it launches a temporary instance, configures it, then creates the image and its snapshot.

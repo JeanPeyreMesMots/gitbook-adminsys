@@ -1,55 +1,55 @@
-# Bonus - Création d'un nom de domaine
+# Bonus - Registering a domain name
 
-NOTE : cette partie n'est pas terminé, il reste à finaliser la migration du site depuis l'instance AWS vers le domaine en question. Cela sera exposé sur le GitBook une fois fait.
+NOTE: this part is still a work in progress. Migrating the site from the AWS instance to this domain remains to be done, and will be documented here once finished.
 
-Lorsqu'une **Hosted Zone** est créée dans Route 53 pour un domaine, AWS génère automatiquement deux enregistrements obligatoires, qui ne peuvent pas être supprimés :
+When a **Hosted Zone** is created in Route 53 for a domain, AWS automatically generates two mandatory records that can't be deleted:
 
-| Type                         | Rôle                                                                                    |
+| Type                         | Role                                                                                    |
 | ---------------------------- | --------------------------------------------------------------------------------------- |
-| **NS** (Nameserver)          | Indique les 4 serveurs de noms de Route 53 à utiliser pour le domaine                   |
-| **SOA** (Start of Authority) | Informations d'autorité DNS de la zone (maître de zone, paramètres de rafraîchissement) |
+| **NS** (Nameserver)          | Lists the 4 Route 53 name servers to use for the domain                                 |
+| **SOA** (Start of Authority) | DNS authority information for the zone (primary server, refresh settings)               |
 
-Pour valider un certificat SSL via DNS (avec ACM sur AWS), il est nécessaire d'ajouter un enregistrement CNAME dans la zone DNS du domaine. Tant que ce CNAME n'est pas présent, le certificat reste en statut "**pending validation**". Et donc, les ressources qui dépendent de ce certificat (comme une distri CloudFront pointant vers un bucket S3) ne peuvent pas être finalisées tant que le certificat n'est pas validé.
+To validate an SSL certificate through DNS (with ACM on AWS), a CNAME record must be added to the domain's DNS zone. Until that CNAME exists, the certificate stays in "**pending validation**" status. As a result, resources that depend on the certificate (like a CloudFront distribution in front of an S3 bucket) can't be finalized until it is validated.
 
-On va donc créer un nom de domaine afin de ne plus être embêté avec un certificat non valide.
+So we'll register a domain name to stop dealing with an invalid certificate.
 
-## Procédure
+## Procedure
 
-On peut déjà essayer via la console de créer un certificat SSL pour le domaine `da-grind.fr` :
+We can first try to create an SSL certificate for the `da-grind.fr` domain from the console:
 
 ![](../../../.gitbook/assets/Pasted_image_20260531150855.png)
 
-> La validation par email est à éviter au profit de la validation par DNS.
+> Prefer DNS validation over e-mail validation.
 
-L'enregistrement correspondant doit ensuite être créé côté route/S3 pour prouver la propriété du domaine :
+The corresponding record must then be created in Route 53 to prove domain ownership:
 
 ![](../../../.gitbook/assets/Pasted_image_20260531151052.png)
 
-Sauf que... la validation reste bloquée : les enregistrements DNS apparaissent grisés. La route ne peut pas être créée tant qu'un enregistrement DNS n'a pas été créé dans Route 53, on arrange donc ça :
+Except... validation gets stuck: the DNS records appear greyed out. The record can't be created as long as there is no hosted zone for the domain in Route 53, so let's fix that:
 
 ![](../../../.gitbook/assets/Pasted_image_20260531151841.png)
 
-Une **Hosted Zone** Route 53 pour `da-grind.fr` crée automatiquement les enregistrements NS et SOA mentionnés plus haut. L'enregistrement de validation DNS pour le certificat ACM est ensuite créé à son tour :
+A Route 53 **Hosted Zone** for `da-grind.fr` automatically creates the NS and SOA records mentioned above. The DNS validation record for the ACM certificate is then created in turn:
 
 ![](../../../.gitbook/assets/Pasted_image_20260531151732.png)
 
-Trois enregistrements DNS sont désormais présents dans Route 53 :
+Three DNS records are now present in Route 53:
 
-| Enregistrement                                  | Type      | Rôle                                                    |
+| Record                                          | Type      | Role                                                    |
 | ----------------------------------------------- | --------- | ------------------------------------------------------- |
-| `da-grind.fr`                                   | **NS**    | Nameservers de Route 53 pour le domaine                 |
-| `_fc907eea5d5b3ec9ddba63b6ea4f08e1.da-grind.fr` | **CNAME** | Validation DNS pour le certificat ACM                   |
-| `da-grind.fr`                                   | **SOA**   | Autorité de la zone (obligatoire, créé automatiquement) |
+| `da-grind.fr`                                   | **NS**    | Route 53 name servers for the domain                    |
+| `_fc907eea5d5b3ec9ddba63b6ea4f08e1.da-grind.fr` | **CNAME** | DNS validation for the ACM certificate                  |
+| `da-grind.fr`                                   | **SOA**   | Zone authority (mandatory, created automatically)       |
 
-### 2. Achat du domaine chez OVH
+### 2. Buying the domain from OVH
 
-En suivant la formation, le formateur (cocadmin) utilisait un nom de domaine personnel, ce qui a conduit à une erreur : une tentative de génération de certificat a été faite pour un domaine qui n'était en réalité pas enregistré. J'ai donc acheté le domaine `da-grind.fr` OVH pour qu'il existe :
+In the course, the instructor (Cocadmin) used his own domain name. Following along led me to an error: I had tried to generate a certificate for a domain that wasn't actually registered. So I bought the `da-grind.fr` domain from OVH so that it would exist:
 
 ![](../../../.gitbook/assets/Pasted_image_20260601184149.png)
 
-Coût : environ 4 €/mois, engagement d'un an.
+Cost: about €4/month, with a one-year commitment.
 
-**Vérification avant achat**, le domaine n'existe pas encore (`NXDOMAIN`) :
+**Check before purchase**: the domain doesn't exist yet (`NXDOMAIN`):
 
 ```bash
 dig da-grind.fr
@@ -62,7 +62,7 @@ dig da-grind.fr
 fr.			270	IN	SOA	a.nic.fr. dnsmaster.afnic.fr. 2245363674 3600 1800 1209600 600
 ```
 
-**Vérification après achat**, le domaine répond désormais correctement avec une adresse IP :
+**Check after purchase**: the domain now resolves to an IP address:
 
 ```bash
 dig www.da-grind.fr
@@ -75,13 +75,13 @@ dig www.da-grind.fr
 www.da-grind.fr.	3561	IN	A	51.91.236.255
 ```
 
-Le site affiche pour l'instant une page "en construction", fournie par défaut par OVH :
+For now, the site shows a default "under construction" page provided by OVH:
 
 ![](../../../.gitbook/assets/Pasted_image_20260601185254.png)
 
-### 3. Connexion à AWS en CLI
+### 3. Signing in to AWS with the CLI
 
-Connexion avec un profil dédié nommé `myProfile` :
+Sign-in with a dedicated profile named `myProfile`:
 
 ```bash
 jpmm@kos-boss:~/Documents/aws-formation$ aws login --profile myProfile
@@ -93,7 +93,7 @@ Updated profile myProfile to use arn:aws:iam::960583973458:user/negrospies-777 c
 Use "--profile myProfile" to use the new credentials, such as "aws sts get-caller-identity --profile myProfile"
 ```
 
-Après authentification via le navigateur, l'identité du profil est vérifiée :
+After authenticating in the browser, we check the profile's identity:
 
 ```bash
 $ aws sts get-caller-identity --profile myProfile
@@ -104,14 +104,14 @@ $ aws sts get-caller-identity --profile myProfile
 }
 ```
 
-Les buckets S3 accessibles avec ce profil sont listés :
+We list the S3 buckets accessible with this profile:
 
 ```bash
 $ aws s3 ls --profile myProfile
 2026-05-30 16:19:12 cocadmin-blog-s3
 ```
 
-Le contenu du bucket concerné est également consultable :
+The bucket's contents can be listed too:
 
 ```bash
 $ aws s3 ls cocadmin-blog-s3 --profile myProfile
@@ -127,11 +127,11 @@ $ aws s3 ls cocadmin-blog-s3 --profile myProfile
 2026-05-30 16:44:50       5173 styles2.js
 ```
 
-### 4. Rattachement du domaine OVH aux serveurs de noms AWS
+### 4. Pointing the OVH domain to the AWS name servers
 
-Le domaine ayant été acheté chez OVH, ses serveurs de noms (DNS) doivent être remplacés par ceux fournis par la Hosted Zone Route 53, afin qu'AWS devienne responsable de la résolution DNS du domaine.
+Since the domain was bought from OVH, its name servers must be replaced with the ones provided by the Route 53 Hosted Zone, so that AWS becomes responsible for the domain's DNS resolution.
 
-Les adresses IP des serveurs de noms Route 53 sont d'abord récupérées via une boucle `nslookup` :
+We first check the IP addresses of the Route 53 name servers with an `nslookup` loop:
 
 ```bash
 for SITE in ns-97.awsdns-12.com ns-1106.awsdns-10.org ns-932.awsdns-52.net ns-1580.awsdns-05.co.uk
@@ -141,7 +141,7 @@ do
 done
 ```
 
-Résultat pour chacun des quatre serveurs de noms (adresse IPv4 et IPv6) :
+Result for each of the four name servers (IPv4 and IPv6 address):
 
 ```bash
 ----- ns-97.awsdns-12.com -----
@@ -169,6 +169,6 @@ Name:	ns-1580.awsdns-05.co.uk
 Address: 2600:9000:5306:2c00::1
 ```
 
-Ces quatre serveurs de noms sont ensuite renseignés côté interface OVH, à la place des serveurs de noms par défaut d'OVH, afin de déléguer la gestion DNS du domaine à Route 53 :
+These four name servers are then entered in the OVH interface, replacing OVH's default name servers, to delegate the domain's DNS to Route 53:
 
 ![](../../../.gitbook/assets/Pasted_image_20260602174428.png)

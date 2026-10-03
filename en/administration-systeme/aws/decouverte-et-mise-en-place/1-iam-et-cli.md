@@ -1,12 +1,12 @@
 # 1 - IAM & CLI
 
-Passons maintenant à l'installation de l'AWS CLI sur une VM Ubuntu, suivi de la création d'un utilisateur IAM via CLI (avec gen d'une access key), puis configuration de ce dernier (`aws configure`).&#x20;
+Let's now install the AWS CLI on an Ubuntu VM, create an IAM user (with an access key), then configure the CLI with it (`aws configure`).&#x20;
 
-### 1. Installation de l'AWS CLI
+### 1. Installing the AWS CLI
 
-Réalisée sur une VM Ubuntu, en suivant la [documentation officielle d'installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+Done on an Ubuntu VM, following the [official installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
-L'installation crée un dossier de configuration dédié :
+Once configured, the CLI uses a dedicated configuration folder:
 
 ```bash
 jpmm@kos-boss:~/.aws$ ll
@@ -17,44 +17,44 @@ drwxr-x--- 22 jpmm jpmm 4096 mai   29 20:03 ../
 -rw-------  1 jpmm jpmm  116 mai   29 20:03 credentials
 ```
 
-* `config` contient la configuration générale (région, format de sortie, etc.).
-* `credentials` contient les identifiants d'accès (access key/secret key).
+* `config` holds the general settings (region, output format, etc.).
+* `credentials` holds the access credentials (access key / secret key).
 
-L'[autocomplétion](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-completion.html) peut également être activée pour faciliter l'usage de la CLI.
+[Command completion](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-completion.html) can also be enabled to make the CLI easier to use.
 
-### 2. Création d'un utilisateur IAM (démo console)
+### 2. Creating an IAM user (console demo)
 
-Dans la console AWS, suivre les étapes suivantes :
+In the AWS console:
 
-1. Aller dans **IAM** → **Users**.
-2. Cliquer sur **Add user**.
-3. Activer l'accès à la console (**access to console**) pour cet utilisateur IAM.
-4. Définir un mot de passe personnalisé (**custom password**), sans exiger de réinitialisation à la première connexion.
-5. Attacher les politiques de permissions existantes nécessaires (**Attach existing policies**). Ne pas ajouter de tags à cette étape.
-6. Retourner à la liste des utilisateurs, et sélectionner l'utilisateur créé, puis aller dans l'onglet **Security credentials**.
-7. Dans la section liée à la CLI, valider la prise de connaissance des conditions (**"CLI, I understand"**).
-8. Créer une clé d'accès (**Create access key**), qui servira à configurer l'AWS CLI.
+1. Go to **IAM** → **Users**.
+2. Click **Add user**.
+3. Enable **console access** for this IAM user.
+4. Set a **custom password**, without requiring a reset at first sign-in.
+5. **Attach existing policies** as needed. No tags at this step.
+6. Go back to the user list, select the new user, then open the **Security credentials** tab.
+7. In the CLI section, acknowledge the recommendation (**"CLI, I understand"**).
+8. **Create access key**, which will be used to configure the AWS CLI.
 
-### 3. Configuration de l'AWS CLI
+### 3. Configuring the AWS CLI
 
-Une fois la clé d'accès générée, configurer le CLI avec la commande suivante :
+Once the access key is generated, configure the CLI with:
 
 ```bash
 aws configure
 ```
 
-Les informations suivantes sont demandées :
+It asks for:
 
-* **Access key ID** et **Secret access key**, récupérées à l'étape précédente.
-* **Région par défaut** : point important, car elle détermine la région AWS utilisée par défaut pour toutes les commandes CLI qui n'en précisent pas explicitement une autre. J'ai gardé **us-east-1** car fuseau horaire indiqué par Cocadmin dans sa formation.
-* **Format de sortie** : `json` par défaut.
+* The **Access key ID** and **Secret access key** from the previous step.
+* The **default region**: an important setting, since it is used by every CLI command that doesn't explicitly specify another one. I kept **us-east-1**, the region used in Cocadmin's course.
+* The **output format**: `json` by default.
 
-Ces informations sont enregistrées dans le fichier `~/.aws/config`. Enfin dernière chose, il est conseillé de passer la console AWS en anglais, pour bien se retrouver dans ses tutos et tout qui pour le coup sont majoritairement en anglais.
+The keys are saved in `~/.aws/credentials`, and the region and output format in `~/.aws/config`. One last tip: switch the AWS console to English, since most tutorials and documentation are in English.
 
-### 4. Première commande de test
+### 4. First test command
 
 ```bash
 aws s3 ls
 ```
 
-Cette commande liste les buckets S3 accessibles avec les identifiants renseignés, et permet de vérifier que la CLI est correctement configurée.
+This command lists the S3 buckets accessible with the configured credentials, which confirms the CLI is set up correctly.

@@ -1,51 +1,51 @@
-# 0 - Concepts & Fondamentaux
+# 0 - Concepts & Fundamentals
 
-#### Compte root vs utilisateur IAM
+#### Root account vs IAM user
 
-* Le compte **root** est le compte principal créé à l'ouverture d'un compte AWS. Certaines actions ne peuvent être réalisées qu'avec ce compte. Il ne doit **jamais** être utilisé en production, car il dispose d'un accès total et sans restriction à l'ensemble des ressources du compte. Et évidemment protégé par mot de passe fort + 2FA.
-* Si le compte root est hacké, catastrophe : il faut démontrer/justifier de nombreux éléments, sans pouvoir identifier la personne à l'origine de la création du compte (si la personne est un ancien employé qui est parti par exemple). Il ne doit jamais être utilisé au quotidien, ni en production. Une fois le compte AWS mis en place, les utilisateurs IAM prennent le relais.
+* The **root** account is the main account created when you open an AWS account. Some actions can only be performed with it. It must **never** be used for day-to-day work or in production, since it has full, unrestricted access to every resource in the account. It must obviously be protected with a strong password + MFA.
+* If the root account gets compromised, it's a disaster: recovering it means proving and justifying many things, which can be very hard if nobody knows who originally created the account (for example, a former employee who has since left). Once the AWS account is set up, IAM users take over.
 
 #### IAM (Identity and Access Management)
 
-Sur un compte AWS, IAM est le système qui gère qui a le droit de faire quoi sur les ressources du compte. Il utilise l'authentification et les autorisations pour gérer **utilisateurs**, **groupes**, les **rôles** et **politiques** afin de contrôler précisément l'accès aux différents services AWS (S3, EC2, VPC, etc.).
+In an AWS account, IAM is the service that controls who can do what on the account's resources. It handles authentication and authorization through **users**, **groups**, **roles** and **policies**, to precisely control access to the various AWS services (S3, EC2, VPC, etc.).
 
-**Par exemple :**
+**For example:**
 
-* Donner à un développeur un accès en lecture seule à un bucket S3.
-* Autoriser une instance EC2 à écrire des données dans CloudWatch.
-* Permettre à un administrateur de gérer l'ensemble des ressources, sans pour autant utiliser le compte root.
+* Giving a developer read-only access to an S3 bucket.
+* Allowing an EC2 instance to write data to CloudWatch.
+* Letting an administrator manage all resources without using the root account.
 
-**Note :** Tout ce qui peut être réalisé depuis l'interface graphique de la console AWS peut également être réalisé via l'API. La console n'est donc qu'une façon parmi d'autres d'interagir avec les mêmes fonctionnalités sous-jacentes. Pour les besoins de la découverte de AWS, les deux parties seront abordés.
+**Note:** everything you can do from the AWS console can also be done through the API. The console is just one way among others to interact with the same underlying features. For this introduction to AWS, both approaches are covered.
 
-#### Types de comptes et support
+#### Support plans
 
-AWS propose différents types de compte :
+AWS offers several support plans:
 
-* **Free Tier**, pour découvrir les services avec un usage gratuit limité.
-* Un autre orienté **développeur**.
-* Un autre orienté **business**, incluant un support proposé par AWS.
+* **Basic**, included with every account (along with the **Free Tier**, to try services with limited free usage).
+* **Developer**, aimed at developers.
+* **Business**, with technical support from AWS staff.
 
-Le support demeure tout de même utile en production, en cas de souci de facturation ou de problème technique nécessitant l'aide direct d'un personnel AWS.
+Paid support remains useful in production, for billing issues or technical problems that require direct help from AWS.
 
 #### Account ID
 
-Il s'agit d'un identifiant à 12 chiffres partagé par le compte root, ainsi que par tous les utilisateurs et tous les rôles IAM créés au sein de ce compte.
+A 12-digit identifier shared by the root account and by every IAM user and role created within that account.
 
-#### Organisation multi-comptes (Identity Center)
+#### Multi-account organization (AWS Organizations & Identity Center)
 
-AWS Identity Center permet de créer des comptes en fonction de différents usecases : un pour la facturation globale, un pour le développement, un pour hoster une VM spécifique, etc...
+AWS Organizations lets you create several accounts for different use cases: one for consolidated billing, one for development, one to host a specific workload, etc. IAM Identity Center then centralizes user access across these accounts.
 
-#### Permissions et tags
+#### Permissions and tags
 
-Les permissions AWS sont des groupes de permissions prêts à l'emploi. Toute ressource créée dans AWS est une ressource à part entière, à laquelle des règles et des permissions peuvent s'appliquer.
+AWS provides **managed policies**: ready-to-use sets of permissions. Every resource created in AWS is a resource in its own right, to which rules and permissions can be applied.
 
-**Note : La politique `AdministratorAccess` accorde des droits d'administration complets, à l'exception de la gestion de la facturation.**
+**Note: the `AdministratorAccess` policy grants full administrative rights. For an IAM user to access billing, IAM access to the Billing console must also be enabled from the root account.**
 
-Les **tags** quand à eux servent à étiqueter une ressource. Ils demeurent utiles pour distinguer les environnements (développement, staging, production) et pour filtrer les coûts associés.
+**Tags**, on the other hand, are labels attached to a resource. They are useful to tell environments apart (development, staging, production) and to break down costs.
 
-### Bonnes pratiques concernant les clés d'accès
+### Access key best practices
 
-* Ne jamais en stocker une en clair, que ce soit dans un dépôt de code ou dans le code source. Si cette dernière venait à être publié accidentellement dans un repo GitHub/GitLab, même le temps d'une 1 minute, partir du principe que cette dernière est compromise et qu'il faut la révoquer.
-* La désactiver ou la supprimer une fois qu'elle n'est plus nécessaire.
-* Appliquer le principe du moindre privilège lors de l'attribution des permissions.
-* Assurer une rotation régulière des clés d'accès, pour limiter les risques en cas de fuite.
+* Never store one in plain text, whether in a code repository or in source code. If a key is ever pushed to a GitHub/GitLab repository, even for one minute, assume it is compromised and revoke it.
+* Deactivate or delete it once it is no longer needed.
+* Apply the principle of least privilege when granting permissions.
+* Rotate access keys regularly, to limit the impact of a leak.

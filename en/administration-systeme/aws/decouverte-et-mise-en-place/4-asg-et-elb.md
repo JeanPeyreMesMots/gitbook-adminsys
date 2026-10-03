@@ -2,56 +2,57 @@
 
 ### ASG (Auto Scaling Group)
 
-Un ASG va s'occuper de créer des règles de mise à l'échelle : par exemple, ajouter une machine lorsqu'un certain seuil de CPU est dépassé, et en retirer lorsque la charge redescend (scaling / descaling automatique). Si le service ASG en lui-même est gratuit, les ressources qu'il déploie (instances, etc.) sont facturées. Cela nous permet de garder une infra **stateless** et réplicable sans contraintes, en gérant un groupe de machines plutôt qu'une seule.
+An ASG applies scaling rules: for example, adding a machine when CPU usage exceeds a threshold, and removing one when the load drops (automatic scale-out / scale-in). The ASG service itself is free, but the resources it launches (instances, etc.) are billed. This lets us keep a **stateless**, easily replicable infrastructure, managing a group of machines rather than a single one.
 
-L'ASG monitor H24 l'état des machines, si une instance est en erreur, elle est détruite et automatiquement remplacée par une nouvelle. Cette mécanique permet de ne plus avoir à se soucier des pannes solo d'infra, puisqu'une machine cassée est recréée d'office. On garantit alors la **disponibilité** du service.
+The ASG monitors the health of its instances around the clock: if an instance fails its health checks, it is terminated and automatically replaced. With this mechanism, you no longer have to worry about individual machine failures, since a broken machine is recreated automatically. This ensures the service stays **available**.
 
-Enfin, les instances peuvent être réparties sur différentes AZ : en cas de panne d'un data center dedans, d'autres instances démarreront dans une autre zone.
+Finally, instances can be spread across several AZs: if a data center goes down, new instances start in another zone.
 
-### Concepts liés à l'ASG
+### ASG concepts
 
-* **Un Launch Template** : définit le type d'instance à lancer (AMI, EC2, SG...) que l'ASG utilise lorsqu'il doit créer une nouvelle instance.
-* **La Scaling policy** : définit les conditions qui s'activent pour ajouter ou retirer des machines (par exemple, un seuil d'utilisation CPU ou de stockage).
+* **Launch Template**: defines what to launch (AMI, instance type, SG...) whenever the ASG needs to create a new instance.
+* **Scaling policy**: defines the conditions for adding or removing machines (for example, a CPU usage threshold).
 
 ![](../../../.gitbook/assets/Pasted_image_20260611191314.png)
 
-_"Et une de plus... ;)"_
+_"And one more... ;)"_
 
-> Attention : vigilance avec le nombre de règles de scaling définies. Des règles trop nombreuses ou mal pensées peuvent entrer en conflit entre elles.
+> Be careful with the number of scaling rules: too many, or poorly designed ones, can conflict with each other.
 
-### ELB (Elastic Load Balancer)
+### ELB (Elastic Load Balancing)
 
-L'ELB répartit le trafic entrant entre plusieurs instances EC2, pour éviter qu'une seule machine encaisse toute la charge. Un ELB est dit "élastique" car il s'adapte en fonction du volume de trafic, peu importe qu'il s'agisse d'un million ou de plusieurs millions de requêtes. Il redirige le trafic reçu sur un port donné vers l'ASG correspondant. Il existe en deux types :
+An ELB spreads incoming traffic across several EC2 instances, so that no single machine takes the whole load. It's called "elastic" because it scales with the traffic, whether that's thousands or millions of requests. It forwards traffic received on a given port to the matching targets (here, the ASG's instances). The main types are:
 
-* **NLB (Network Load Balancer)** : le point central qui reçoit l'ensemble des requêtes des utilisateurs.&#x20;
-* **ALB (Application Load Balancer)** : il opère au niveau applicatif (gérant le traffic HTTP/HTTPS) au lieu du niveau TCP. Il permet des gérer plus finement des règles de routages, comme forwarder une requête vers un service différent selon l'URL demandée par exemple.
+* **NLB (Network Load Balancer)**: operates at layer 4 (TCP/UDP), with very high performance and low latency.&#x20;
+* **ALB (Application Load Balancer)**: operates at layer 7 (HTTP/HTTPS) instead of the TCP level. It supports finer-grained routing rules, such as forwarding a request to a different service depending on the requested URL.
 
-### ALB : le plus utilisé
+### ALB: the most common
 
-ALB demeure le plus utilisé, on va se contenter d'utiliser ce dernier. Il s'appuie sur 4 éléments :
+The ALB is the most widely used, so that's the one we'll focus on. It relies on these building blocks:
 
-* **Listener** : le port d'écoute du load balancer.
-* **Target group** : définit vers quel groupes d'instances rediriger les requêtes reçues.
-* **Rules** : les règles de routage&#x20;
-* **Tarification** : l'ALB possède un coût fixe, de l'ordre de 16 $/mois.
+* **Listener**: the port the load balancer listens on.
+* **Target group**: the group of instances requests are forwarded to.
+* **Rules**: the routing rules.
 
-Un ELB est en générale associé à une seule application. Il est possible de mutualiser un même ELB entre plusieurs environnements (par exemple dev et prod), mais ça pourrait poser problème, un environnement pourrait alors affecter l'autre.
+As for **pricing**, an ALB has a fixed base cost of around $16/month, plus usage.
 
-Schéma d'ensemble de l'architecture :
+An ELB is usually dedicated to a single application. You can share one ELB across several environments (for example dev and prod), but that can cause problems, since one environment could then affect the other.
+
+Overall architecture diagram:
 
 ![](../../../.gitbook/assets/Pasted_image_20260611193024.png)
 
-Le combo ASG + ELB rend l'infrastructure suffisante à elle même, en s'adaptant à la charge et avec hotfix en cas de panne d'une instance :
+The ASG + ELB combo makes the infrastructure self-sufficient: it adapts to the load and heals itself when an instance fails:
 
 ![](../../../.gitbook/assets/Pasted_image_20260611195617.png)
 
-## Exercice pratique en AWS CLI
+## Hands-on exercise with the AWS CLI
 
-L'exercice suivant sera réalisé directement en ligne de commande :
+The following exercise is done entirely from the command line:
 
 ![](../../../.gitbook/assets/Pasted_image_20260613160233.png)
 
-**L'ordre des opérations à respecter est le suivant**, chaque étape dépendra parfois de l'ARN (identifiant de ressource) généré par l'étape précédente :
+**The order of operations matters**, since some steps need the ARN (resource identifier) produced by a previous one:
 
 ```
 1. Launch Template
@@ -62,9 +63,9 @@ L'exercice suivant sera réalisé directement en ligne de commande :
 6. Scaling Policy      → utilise le nom de l'ASG
 ```
 
-### 1. Création du Launch Template
+### 1. Creating the Launch Template
 
-Comme vu précédemment, il définit la configuration des instances qui seront lancées par l'ASG :
+As seen above, it defines the configuration of the instances launched by the ASG:
 
 ```bash
 aws --profile myProfile ec2 create-launch-template \
@@ -78,22 +79,22 @@ aws --profile myProfile ec2 create-launch-template \
   }'
 ```
 
-Avec les éléments dedans :
+With the following parameters:
 
-`--launch-template-name mcflurry-lt` : nom du template
+`--launch-template-name mcflurry-lt`: the template's name
 
-`--version-description "v1"` : versionning du LT, pour identifier ou rollback en cas de pépins. Ici on part sur la v1.
+`--version-description "v1"`: launch template versioning, to identify versions or roll back if something goes wrong. Here we start with v1.
 
-Puis dans `launch-template-data` :
+Then in `launch-template-data`:
 
-* `ImageId` : l'AMI utilisée, sur laquelle on démarre chaque instance
-* `InstanceType: t3.micro` : type d'instance, ici la **t3.micro** qui comporte 2 vCPU, 1 Go de RAM. Un truc léger et idéal pour du test.
-* `KeyName` : la paire de clés SSH à associer aux instances, pour s'y connecter après
-* `SecurityGroupIds` : SG concernés, et donc les règles de firewall qui vont avec&#x20;
+* `ImageId`: the AMI each instance boots from
+* `InstanceType: t3.micro`: the instance type, here a **t3.micro** with 2 vCPUs and 1 GiB of RAM. Lightweight and ideal for testing.
+* `KeyName`: the SSH key pair attached to the instances, to connect to them later
+* `SecurityGroupIds`: the SGs to apply, and therefore the associated firewall rules&#x20;
 
-### 2. Création du Load Balancer (ALB)
+### 2. Creating the Load Balancer (ALB)
 
-Le load balancer doit être créé avant le listener. Les subnets disponibles dans chaque AZ sont d'abord récupérés :
+The load balancer must be created before the listener. We first get the available subnets in each AZ:
 
 ```bash
 $ aws --profile myProfile ec2 describe-subnets \
@@ -113,7 +114,7 @@ $ aws --profile myProfile ec2 describe-subnets \
 +------------+------------------+----------------------------+
 ```
 
-L'ALB est ensuite créé, réparti sur ces dits-subnets :
+The ALB is then created across these subnets:
 
 ```bash
 aws --profile myProfile elbv2 create-load-balancer \
@@ -124,9 +125,9 @@ aws --profile myProfile elbv2 create-load-balancer \
   --type application
 ```
 
-### 3. Création du Target Group
+### 3. Creating the Target Group
 
-Le target group doit être créé avant le listener et avant l'ASG, puisque ces deux derniers ont besoin de son ARN :
+The target group must be created before the listener and the ASG, since both need its ARN:
 
 ```bash
 aws --profile myProfile elbv2 create-target-group \
@@ -139,15 +140,15 @@ aws --profile myProfile elbv2 create-target-group \
   --health-check-path /
 ```
 
-Que l'on finit par avoir en sortie :
+Which returns:
 
 ```bash
 "TargetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:960583973458:targetgroup/mcflurry-tg/a02a4cce8d6a248f",
 ```
 
-### 4. Création du Listener
+### 4. Creating the Listener
 
-Le listener relie le load balancer via son ARN au target group, là aussi via son ARN, sur un port donné :
+The listener connects the load balancer (by its ARN) to the target group (also by its ARN), on a given port:
 
 ```bash
 aws --profile myProfile elbv2 create-listener \
@@ -161,9 +162,9 @@ aws --profile myProfile elbv2 create-listener \
 "ListenerArn": "arn:aws:elasticloadbalancing:us-east-1:960583973458:listener/app/mcflurry-alb/cf159c6b1ee5acd6/e0c2e25f6133a417",
 ```
 
-### 5. Création de l'Auto Scaling Group
+### 5. Creating the Auto Scaling Group
 
-On créé l'ASG y mettant le launch template et l'ARN du target group dans la commande suivante :
+We create the ASG with the launch template and the target group's ARN:
 
 ```bash
 aws --profile myProfile autoscaling create-auto-scaling-group \
@@ -176,7 +177,7 @@ aws --profile myProfile autoscaling create-auto-scaling-group \
   --target-group-arns arn:aws:elasticloadbalancing:us-east-1:960583973458:targetgroup/mcflurry-tg/a02a4cce8d6a248f
 ```
 
-Puis on regarde si l'ASG est bien rattaché au bon target group défini :
+Then we check that the ASG is attached to the right target group:
 
 ```bash
 aws --profile myProfile autoscaling describe-auto-scaling-groups \
@@ -187,9 +188,9 @@ aws --profile myProfile autoscaling describe-auto-scaling-groups \
 ]
 ```
 
-### 6. Création de la politique de scaling
+### 6. Creating the scaling policy
 
-On créé ensuite une politique de scaling, en choisissant un taux d'utilisation du CPU moyen de 30 % sur l'ensemble de l'ASG :
+We then create a scaling policy targeting an average CPU usage of 30% across the ASG:
 
 ```bash
 aws --profile myProfile autoscaling put-scaling-policy \
@@ -204,7 +205,7 @@ aws --profile myProfile autoscaling put-scaling-policy \
   }'
 ```
 
-Cette commande crée automatiquement deux alarmes CloudWatch associées (seuil haut et seuil bas) :
+This command automatically creates two associated CloudWatch alarms (high and low thresholds):
 
 ```json
 {
@@ -222,22 +223,22 @@ Cette commande crée automatiquement deux alarmes CloudWatch associées (seuil h
 }
 ```
 
-On voit ensuite que la politique est bien créée côté console :
+The policy also shows up in the console:
 
 ![](../../../.gitbook/assets/Pasted_image_20260614002651.png)
 
-Le load balancer est désormais actif sur le port 8000, et sert bien la page de l'application :
+The load balancer is now live on port 8000 and serves the application's page:
 
 ```bash
 curl http://mcflurry-alb-8475791.us-east-1.elb.amazonaws.com:8000/
 <h1>Hello World</h1>
 ```
 
-### 7. Test de la montée en charge automatique
+### 7. Testing automatic scale-out
 
-**Problème rencontré** : Nginx sur mes serveurs se contente de servir une simple page HTML, ce qui ne consomme que très peu de CPU. Même en lançant un grand nombre de requêtes, le taux d'utilisation CPU risque de rester bas, et donc ne déclenchera pas la politique de scaling.
+**Problem**: Nginx on my servers only serves a simple HTML page, which uses very little CPU. Even with a large number of requests, CPU usage would likely stay low and never trigger the scaling policy.
 
-**La solutio ?** Stresser directement le CPU des instances, à l'aide de l'outil `stress` (à au préalable) qui va faire augmenter la charge de lui-même, pour voir si la policy s'exécute et créé les nouvelles machines :
+**The solution?** Stress the instances' CPU directly with the `stress` tool (installed beforehand), to see whether the policy kicks in and launches new machines:
 
 ```bash
 ssh -i mcflurry-kostan.pem ubuntu@35.168.112.58 "sudo apt install stress -y && stress --cpu 4 --timeout 300"
@@ -248,7 +249,7 @@ stress: info: [1552] dispatching hogs: 4 cpu, 0 io, 0 vm, 0 hdd
 stress: info: [1552] successful run completed in 300s
 ```
 
-On ouvre un autre terminal pour regarder ça en direct :
+We open another terminal to watch it live:
 
 ```bash
 Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00:54:55 2026
@@ -261,7 +262,7 @@ Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00
 ]
 ```
 
-Au bout de 5 minutes de charge, on peut voir que deux nouvelles instances sont bien apparues ! On dispose désormais de trois instances actives :
+After 5 minutes of load, two new instances have appeared! We now have three running instances:
 
 ```bash
 Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00:54:55 2026
@@ -282,6 +283,6 @@ Toutes les 10,0s: aws --profile myProfile autoscalin...  kos-boss: Sun Jun 14 00
 ]
 ```
 
-La politique de scaling fonctionne donc comme attendu. On peut d'ailleurs observer le graphique d'usage CPU du groupe qui affiche la montée en charge de ce dernier :
+The scaling policy works as expected. The group's CPU usage graph shows the load increase:
 
 ![](../../../.gitbook/assets/Pasted_image_20260614011951.png)

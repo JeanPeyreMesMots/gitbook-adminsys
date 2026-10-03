@@ -20,4 +20,4 @@ You'll find all the articles, notes and writeups done in the case of my career t
 
 [https://linktr.ee/kostanleoni](https://linktr.ee/kostanleoni)
 
-Note : that English version of this GitBook has been translated with AI/Online Translation assistance and reviewed by the author :)
+Note : that English version of this GitBook has been translated with AI/Online Translation assistance and reviewed by the author :). there is still some work in progress, translation will soon be completed.

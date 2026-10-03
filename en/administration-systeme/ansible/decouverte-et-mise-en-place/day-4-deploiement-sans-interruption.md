@@ -73,7 +73,7 @@ To make sure only one server at a time is updated (and therefore unavailable), `
 
 On review, a problem stands out: the task fixing `DB_HOST` was placed too late in the playbook, after the page check. As a result, the check always failed, since the configuration hadn't been fixed yet at that point.
 
-The corrected playbook moves the `DB_HOST` fix right after the repository clone, and before the page check:
+The corrected playbook moves the `DB_HOST` fix right after the repository clone, and before the page check: 
 
 ```yaml
 ---

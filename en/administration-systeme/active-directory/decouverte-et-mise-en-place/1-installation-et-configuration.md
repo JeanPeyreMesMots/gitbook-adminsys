@@ -22,11 +22,11 @@ Renaming the server to "**mesmots**", with the description "Serveur AD MesMots":
 
 ### Creating the domain:
 
-The first step, before creating the Active Directory domain, is to install the "**ADDS**" role: **Active Directory Domain Services**. This is the role that allows us to create an Active Directory domain:
+Before creating the Active Directory domain we must install the "**ADDS**" role, called **Active Directory Domain Services** that will allows us to create an Active Directory domain:
 
 <figure><img src="../../../.gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
 
-We then promote the server to a DC, with the domain name "**mesmots.local**":
+We then promote the server to be a DC, with the following name "**mesmots.local**":
 
 <figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
 
@@ -38,7 +38,7 @@ Once the domain is created, we can start creating the requested OUs, with the fo
 
 <figure><img src="../../../.gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
 
-At the end we get the OUs containing the members, assigned to each group:
+At the end we get our OUs containing all the members, assigned to each group:
 
 ```rust
 mesmots.local
@@ -52,7 +52,7 @@ mesmots.local
     └── OU Ordinateurs
 ```
 
-This gives us the following complete tree, with each user belonging to a group named "**GRP\_CODIR**", "**GRP\_ADMIN**"... depending on the name of the OU:
+This gives us the following complete tree, with each user belonging to a group named "**GRP\_CODIR**", "**GRP\_ADMIN**" and so on:
 
 ```rust
 mesmots.local
@@ -104,17 +104,15 @@ mesmots.local
 
 ### Creating the shared disk
 
-While trying to create the folder hierarchy on the server's "**D:**" drive, I realized it did not exist on the server. I therefore had to create a dedicated partition, using a virtual hard disk.
-
-So I created a virtual hard disk in "**.vmdk**" format on VMware, named "**partage\_commun.vmdk**":
+While trying to create the folder hierarchy on the server's "**D:**" drive, I realized it did not exist on the server. Therefore I had to create a dedicated partition, using a virtual hard disk. So I created a virtual hard disk in "**.vmdk**" format on VMware, named "**partage\_commun.vmdk**":
 
 <figure><img src="../../../.gitbook/assets/image (73).png" alt=""><figcaption></figcaption></figure>
 
-Once the disk is created, we open "**diskmgmt.msc**" on the AD server, and the disk shows up:
+Once the disk is created, we open "**diskmgmt.msc**" on the AD server and the disk shows up:
 
 <figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-The disk is then mounted as **D:/**. We create a folder named "**Partages**" on it, and can then create the folders with their trees matching the OUs. Here is the directory listing:
+The disk is then mounted as **D:/**. We create a folder named "**Partages**" on it, and then we can create the folders with their trees matching the OUs. Here is the directory listing:
 
 ```powershell
 PS C:\Users\Administrateur> cd D:\Partages
@@ -150,7 +148,7 @@ The lab mentions **X:**, **P:**, etc. as drives mapped on the clients. Based on 
 
 ### Creating the share:
 
-We can first see that the role is already present on the AD server:
+We can first see the role is already present on the AD server:
 
 <figure><img src="../../../.gitbook/assets/image (74).png" alt=""><figcaption></figcaption></figure>
 
@@ -196,7 +194,7 @@ Then we can apply the NTFS permissions by adding each desired group and ticking 
 
 <figure><img src="../../../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
-So we properly set each required permission for each group on each folder. This gives the following PowerShell listing of the permissions of each folder ;) :
+And we properly set each required permission for each group on each folder :) This gives the following PowerShell listing of the permissions of each folder:
 
 ```ps1
 # Dossier : ADMINISTRATIF
@@ -235,7 +233,7 @@ GG_GRP_IT              Modify                       False
 GG_GRP_PROFS           Modify                 
 ```
 
-Each group therefore has, in a granular way, exactly the permissions it needs to access each folder. This ensures the access rights match the ones defined in the permissions table.
+Each group therefore exactly the permissions it needs to access each folder, as defined in the permissions table before.
 
 ### Configuring the Windows 11 client VM and the network
 
@@ -243,7 +241,7 @@ Now that the server and the share are in place, we can create a Windows 11 VM on
 
 _Note: to be able to join the AD domain, it is essential to choose the "Pro" edition._
 
-Once the VM is installed, I debloat Windows with [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) to free up resources on my machine and get a lighter system:
+Once the VM is installed, I debloat it Windows with [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) to free up resources and get a lighter system:
 
 <figure><img src="../../../.gitbook/assets/image (82).png" alt=""><figcaption></figcaption></figure>
 
@@ -251,7 +249,7 @@ We then set the AD server's address, **192.168.1.100**, as the DNS server, which
 
 <figure><img src="../../../.gitbook/assets/image (98).png" alt=""><figcaption></figcaption></figure>
 
-Next, we configure a virtual network _**vmnet1**_ in VMware to set up a bridged connection between the Active Directory server and a Windows 11 VM, with a DHCP range from **192.168.1.100 to 192.168.1.254**:
+Next, we configure a virtual network _**vmnet1**_ in VMware to set up a bridged connection between the Active Directory server and the Windows 11 VM, who will get a DHCP range from **192.168.1.100 to 192.168.1.254**:
 
 <figure><img src="../../../.gitbook/assets/image (83).png" alt=""><figcaption></figcaption></figure>
 

@@ -1,28 +1,28 @@
-# 4 - Déploiement sans interruption
+# 4 - Zero-downtime deployment
 
-Nous passons désormais à la mise en place d'un déploiement réellement sans interruption de service : chaque serveur web est retiré du load balancer avant d'être mis à jour, corrigé, vérifié, puis remis dans le load balancer, sur un serveur à la fois.
+We now move on to a truly zero-downtime deployment: each web server is removed from the load balancer, updated, fixed and verified, then put back into the load balancer, one server at a time.
 
-On utilisera le module `community.general.haproxy` piloté via son API, en suivant l'ordre des tâches dans le playbook.
+We use the `community.general.haproxy` module, which drives HAProxy through its API, following the order of tasks in the playbook.
 
-#### Principe
+#### How it works
 
-L'idée est évidemment de ne jamais mettre à jour tous les serveurs en même temps. Comme on l'a spécifié avant, l'un est retiré du load balancer, mis à jour et vérifié, pendant que l'autre continue de servir tout le trafic. Puis il est réintégré avant de passer au serveur suivant.
+The idea is obviously never to update all servers at once. As described before, one server is removed from the load balancer, updated and verified while the other keeps serving all the traffic. It is then put back before moving on to the next server.
 
-Ce qui va nous aider, c'est que HAProxy expose une interface permettant d'ajouter ou de retirer dynamiquement un serveur de son pool, sans redémarrer le service. Ansible pilote cette interface via un module dédié plutôt que par une commande manuelle, ce qui est ici un gros point fort.
+What helps us here is that HAProxy exposes an interface to dynamically add or remove a server from its pool without restarting the service. Ansible drives this interface through a dedicated module rather than a manual command, which is a big plus.
 
-On suivra l'ordre logique correct pour l'ensemble du workflow :
+We follow this logical order for the whole workflow:
 
 ```
-clone du dépôt → 
-correction de la configuration (DB_HOST) → 
-(si besoin) restauration de la BDD → 
-vérification de la page → 
-réintégration dans le load balancer
+cloning the repo → 
+configuration fixing (DB_HOST) → 
+(if needed) restauration of DB → 
+checking the page → 
+reintegration into the LB
 ```
 
-#### 1. Première version : retirer le serveur avant la mise à jour
+#### 1. First version: removing the server before the update
 
-On commence par retirer un serveur du load balancer via le module `community.general.haproxy`, rajouté dans le `main.yml` du rôle `deploy` :
+We start by removing a server from the load balancer with the `community.general.haproxy` module, added to the `main.yml` of the `deploy` role:
 
 ```yaml
 - name: retirer serveur web du load balancer
@@ -53,13 +53,13 @@ On commence par retirer un serveur du load balancer via le module `community.gen
   failed_when: "ansible_hostname not in this.content"
 ```
 
-Quelques précisions :
+A few details:
 
-* Le nom du backend, `habackend`, correspond au nom choisi précédemment dans la configuration HAProxy. Il s'agit de celui par défaut, que j'ai laissé.
-* Pour la condition `failed_when`, `ansible_hostname` désigne le hostname du serveur courant sur lequel se lance le playbook
-* `delegate_to` cible bien le load balancer, puisque c'est cet hôte qui doit recevoir la commande d'activation/désactivation du backend.
+* The backend name, `habackend`, matches the name set earlier in the HAProxy configuration. It's the role's default, which I kept.
+* In the `failed_when` condition, `ansible_hostname` is the hostname of the server the playbook is currently running on.
+* `delegate_to` targets the load balancer, since that's the host that must receive the command to enable/disable the backend server.
 
-Pour garantir qu'un seul serveur à la fois est mis à jour (et donc indisponible), l'option `serial: 1` est ajoutée au playbook de déploiement :
+To make sure only one server at a time is updated (and therefore unavailable), `serial: 1` is added to the deployment playbook:
 
 ```yaml
 ---
@@ -69,11 +69,11 @@ Pour garantir qu'un seul serveur à la fois est mis à jour (et donc indisponibl
     - deploy
 ```
 
-#### 2. Correction de l'ordre des tâches
+#### 2. Fixing the task order
 
-Après relecture, un problème est identifié : la tâche de correction du `DB_HOST` était placée trop bas dans le playbook. Après la vérification de la page, ce qui faisait échouer systématiquement cette vérification puisque la configuration n'était pas encore corrigée à ce stade.
+On review, a problem stands out: the task fixing `DB_HOST` was placed too late in the playbook, after the page check. As a result, the check always failed, since the configuration hadn't been fixed yet at that point.
 
-Le playbook corrigé replace la correction du `DB_HOST` juste après le clone du dépôt, et avant la vérification de la page :
+The corrected playbook moves the `DB_HOST` fix right after the repository clone, and before the page check:
 
 ```yaml
 ---
@@ -136,9 +136,9 @@ Le playbook corrigé replace la correction du `DB_HOST` juste après le clone du
   delegate_to: lb-server
 ```
 
-> Une pause de 20 secondes est ajoutée après le retrait du serveur du load balancer, afin de laisser le temps aux connexions en cours de se terminer proprement avant de poursuivre.
+> A 20-second pause is added after removing the server from the load balancer, to let in-flight connections finish cleanly before continuing.
 
-Lors du lancement du playbook, on observe bien que le serveur `web-server-1` devient temporairement indisponible pendant que `web-server-2` continue de répondre normalement :
+When running the playbook, we can see that `web-server-1` becomes temporarily unavailable while `web-server-2` keeps responding normally:
 
 ```bash
 TASK [deploy : retirer serveur web du load balancer] **************************************
@@ -149,7 +149,7 @@ Pausing for 20 seconds
 (ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
 ```
 
-Depuis n'importe quelle machine, voir le load balancer lui-même, on constate bien que c'est `web-server-2` qui prend le relais pendant que `web-server-1` est mis à jour :
+From any machine, even the load balancer itself, we can see that `web-server-2` takes over while `web-server-1` is being updated:
 
 ```bash
 ubuntu@lb-server:~$ for i in {1..10}; do curl -s http://lb-server/app/index.php | grep -oP '(?<=TODO )[^<]+'; done
@@ -170,9 +170,9 @@ entry #2
 entry #3
 ```
 
-#### 3. Résultat final
+#### 3. Final result
 
-Une fois que le playbook est entièrement finalisé et que les serveurs sont sur roues, une nouvelle série de requêtes montre que les deux serveurs alternent correctement en round robin, chacun répondant à tour de rôle :
+Once the playbook has fully run and both servers are back up, a new series of requests shows that the two servers correctly alternate in round robin, each answering in turn:
 
 ```bash
 ubuntu@web-server-1:~$ for i in {1..10}; do curl -s http://lb-server/app/index.php | grep -oP '(?<=TODO )[^<]+'; done
@@ -200,8 +200,8 @@ entry #3
 
 ### Conclusion
 
-Aucun downtime n'a été constaté, y compris pendant le déploiement lui-même. Il est désormais possible de déployer en pleine journée, sereinement, sans interruption de service pour les utilisateurs.
+No downtime was observed, not even during the deployment itself. It is now possible to deploy in the middle of the day, calmly, with no service interruption for users.
 
-À savoir quand dans le contexte d'une infra réelle, des modules existent pour notifier automatiquement la fin d'un déploiement. Par exemple un module d'envoi d'e-mail ou un module d'envoi de message Slack une fois le déploiement terminé avec succès.
+Good to know: in a real infrastructure, modules exist to automatically notify the end of a deployment, for example by sending an e-mail or a Slack message once the deployment has completed successfully.
 
-Il est recommandé de vérifier avant de déployer sur Ansible Galaxy si des rôles existants permettent de simplifier davantage la gestion de la configuration HAProxy.
+Before going further, it's also worth checking Ansible Galaxy for existing roles that could simplify managing the HAProxy configuration even more.

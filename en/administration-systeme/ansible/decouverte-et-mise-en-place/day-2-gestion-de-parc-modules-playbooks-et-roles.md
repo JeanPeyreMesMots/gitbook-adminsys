@@ -1,27 +1,27 @@
-# 2 - Gestion de parc, modules, playbooks & rôles
+# 2 - Fleet management, modules, playbooks & roles
 
-#### Comparaison avec les autres méthodes
+#### Comparison with other methods
 
-| Méthode                            | Limite                                                                              |
-| ---------------------------------- | ----------------------------------------------------------------------------------- |
-| SSH une par une sur chaque serveur | Ingérable dès que le parc grandit                                                   |
-| MultiSSH                           | Un peu mieux mais peu scalable (mauvaise expérience dès \~100 machines)             |
-| Scripts bash                       | Mieux, mais pas idéal non plus : des usecases non gérés, logs fastidieux à vérifier |
-| **Ansible**                        | Apporte l'**idempotence** (une tâche rejouée sans changement ne modifie rien)       |
+| Method                              | Limitation                                                                          |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| SSH into each server one by one     | Unmanageable as soon as the fleet grows                                             |
+| MultiSSH                            | A bit better but doesn't scale well (painful from \~100 machines)                   |
+| Bash scripts                        | Better, but still not ideal: unhandled use cases, logs tedious to check             |
+| **Ansible**                         | Brings **idempotence** (a task replayed with nothing to change, won't changes anything)     |
 
-#### Pourquoi Ansible ?
+#### Why Ansible?
 
-L'idée derrière Ansible, c'est de plus jamais avoir peur de toucher à l'infra: peur de déployer, peur de faire une mise à jour, peur de casser un service en prod. Du coup on suit la règle de base : on ne touche plus un serveur à la main.
+The idea behind Ansible is to never be afraid of touching the infrastructure again: afraid of deploying, of running an update, of breaking a production service. So we follow one basic rule: nobody touches a server by hand anymore.
 
-Chaque changement passe par un **rôle** ou un **playbook**, se commit dans Git avec un message qui explique le pourquoi du changement, puis s'applique de façon analogue sur tous les serveurs concernés. Comme ça on garde une vraie traçabilité de ce qui a été fait.
+Every change goes through a **role** or a **playbook**, is committed to Git with a message explaining why, and is then applied the same way to every server concerned. This gives us real traceability of what was done.
 
-Les environnements gérés par Ansible sont jetables, ce qui veut dire que si un serveur casse, on le recrée en quelques minutes avec les playbooks mis à disposition sur un Gitlab, par exemple.
+Environments managed by Ansible are disposable: if a server breaks, it can be rebuilt in minutes from playbooks stored in a GitLab repository, for example.
 
-Côté modules, l'idéal c'est d'utiliser un module par action précise. Le module `shell` marche toujours, mais s'il est mal utilisé il pourra casser l'idempotence. Donc autant que possible, on privilégie les modules dédiés.
+As for modules, the ideal is to use one dedicated module per specific action. The `shell` module always works, but used carelessly it can break idempotence. So whenever possible, dedicated modules come first.
 
-Enfin, pour ne pas réinventer la roue, autant piocher dans **Ansible Galaxy**. Il comprend tout un ensemble de rôles communautaires déjà fait pour la plupart des rôles classiques.
+Finally, no need to reinvent the wheel: **Ansible Galaxy** offers a large set of community roles for most common use cases.
 
-#### Structure logique à savoir
+#### Logical structure to remember
 
 ```
 playbook = liste de plays
@@ -29,7 +29,7 @@ play     = contient des rôles
 rôle     = contient tasks / handlers / vars / defaults / templates / files / meta
 ```
 
-Pour définir l'inventory par défaut on choisit de créer fichier `ansible.cfg` :
+To set the default inventory, we create an `ansible.cfg` file:
 
 ```bash
 cat ansible.cfg
@@ -37,7 +37,7 @@ cat ansible.cfg
 inventory = ./inventory
 ```
 
-Exemple d'inventory avec groupes, sous-groupe de variables (`web:vars`) :
+Example inventory with groups and group variables (`web:vars`):
 
 ```bash
 cat inventory
@@ -55,29 +55,29 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ansible_python_interpreter=/usr/bin/python3.10
 ```
 
-On peut aussi cibler un groupe par regex :
+We can also target groups with a pattern:
 
 ```bash
 ansible backup* -i inventory -a "uname -a"
 ```
 
-Ou plusieurs groupes via une virgule :
+Or several groups separated by a comma:
 
 ```bash
 ansible backup-web,web -i inventory -a "uname -a"
 ```
 
-Chaque groupe peut posséder ses propres variables : ici, `web:vars` est un sous-groupe qui définit les variables associées au groupe `web`.&#x20;
+Each group can have its own variables: here, `web:vars` defines the variables for the `web` group.&#x20;
 
-**Attention : l'ordre dans lequel les serveurs répondent dépend du premier hôte à avoir traité la commande, et non de l'ordre dans lequel ils sont déclarés dans l'inventory.**
+**Note: the order in which servers respond depends on which host finishes first, not on the order in which they are declared in the inventory.**
 
-#### Test de modules en ad-hoc
+#### Testing modules with ad-hoc commands
 
-Il existe une très longue liste pour tout types de modules :&#x20;
+There is a very long list of modules for all kinds of tasks:&#x20;
 
-* https://docs.ansible.com/projects/ansible/latest/collections/index\_module.html parmi lesquelles :
+* https://docs.ansible.com/projects/ansible/latest/collections/index\_module.html, including:
 
-Le Module `shell` pour exécuter une commande :
+The `shell` module to run a command:
 
 ```bash
 ansible web -m shell -a "uname -a"
@@ -87,13 +87,13 @@ web-server-2 | CHANGED | rc=0 >>
 Linux web-server-2 5.15.0-185-generic ...
 ```
 
-Le Module `apt` pour installer un paquet :
+The `apt` module to install a package:
 
 ```bash
 ansible web -m apt -a "name=nmap"
 ```
 
-Le Module `script` pour exécuter un script local sur les hôtes distants :
+The `script` module to run a local script on remote hosts:
 
 ```bash
 cat script-test.sh
@@ -103,11 +103,11 @@ date
 ansible web -m script -a "./script-test.sh"
 ```
 
-> L'objectif à terme dans une infra réél est de remplacer progressivement les scripts par des modules dédiés, appelés depuis des rôles ou des playbooks.
+> In a real infrastructure, the long-term goal is to gradually replace scripts with dedicated modules, called from roles or playbooks.
 
-#### Premier playbook YAML
+#### First YAML playbook
 
-Un fichier YAML doit toujours commencer par trois tirets (`---`). Ici un exemple de playbook que j'ai appelé "**lamp.yml**" qui installe Apache (pour l'instant):
+A YAML file should start with three dashes (`---`). Here is an example playbook I called "**lamp.yml**", which installs Apache (for now):
 
 ```yaml
 ---
@@ -118,7 +118,7 @@ Un fichier YAML doit toujours commencer par trois tirets (`---`). Ici un exemple
         name: apache2
 ```
 
-En le lançant il se déploie sur les serveurs **web-server-1** et **2**, avec un "**ok=2**" indiquant que l'action a été appliquée :
+When run, it targets **web-server-1** and **2**. "**ok=2**" means both tasks succeeded, and "**changed=0**" means Apache was already installed, so nothing had to be changed:
 
 ```bash
 ansible-playbook -i ../inventory lamp.yml
@@ -137,7 +137,7 @@ web-server-1  : ok=2  changed=0  unreachable=0  failed=0
 web-server-2  : ok=2  changed=0  unreachable=0  failed=0
 ```
 
-Vérification sur **web-server-1** :
+Check on **web-server-1**:
 
 ```bash
 root@web-server-1:~# ll /etc/apache2/
@@ -151,7 +151,7 @@ drwxr-xr-x  2 root root  4096 Jul  4 17:23 conf-
 [...]
 ```
 
-**Démonstration de l'idempotence** : si on supprime Apache manuellement puis que le playbook est relancé, Ansible détecte l'écart et réinstalle uniquement ce qui manque :
+**Idempotence in action**: if Apache is removed manually and the playbook is run again, Ansible detects the drift and reinstalls only what is missing:
 
 ```bash
 sudo apt remove --purge apache2
@@ -169,11 +169,11 @@ web-server-1  : ok=2  changed=1  unreachable=0  failed=0
 web-server-2  : ok=2  changed=0  unreachable=0  failed=0
 ```
 
-Le compte-rendu affiche alors `changed=1`, alors qu'il aurait affiché `changed=0` si aucune modification n'avait été nécessaire.
+The recap now shows `changed=1` for web-server-1, whereas it would show `changed=0` if nothing had needed changing.
 
-#### Enrichissement du playbook : service, handlers et idempotence sur un dépôt
+#### Extending the playbook: services, handlers and an idempotent repository
 
-On peut compléter le playbook pour démarrer et activer automatiquement le service Apache :
+We can extend the playbook to start and enable the Apache service automatically:
 
 ```yaml
 - hosts: web
@@ -189,7 +189,7 @@ On peut compléter le playbook pour démarrer et activer automatiquement le serv
         enabled: yes
 ```
 
-Un dépôt PHP tiers est ensuite ajouté. Certes via le module shell, mais la tâche reste idempotente grâce à l'argument `creates`, qui empêche son exécution si le fichier indiqué existe déjà :
+A third-party PHP repository is then added. It uses the shell module, but the task stays idempotent thanks to the `creates` argument, which skips it if the given file already exists:
 
 ```yaml
 - name: installer add-apt-repository
@@ -204,9 +204,9 @@ Un dépôt PHP tiers est ensuite ajouté. Certes via le module shell, mais la t�
     creates: /etc/apt/sources.list.d/ondrej-ubuntu-php-xenial.list
 ```
 
-Voici le playbook complet, incluant l'installation de PHP et un **handler**. À noter cependant, les paquets installés sont vieux, mais correspondent au contexte de la version des VM évoquée dans la formation.&#x20;
+Here is the full playbook, including the PHP installation and a **handler**. Note that the packages are old, but they match the VM versions used in the course.&#x20;
 
-Le handler n'est déclenché que si une tâche l'ayant notifié a produit un changement, et il ne s'exécute qu'une seule fois, à la fin du playbook :
+A handler only runs if a task that notified it actually made a change, and it runs only once, at the end of the playbook:
 
 ```yaml
 - hosts: web
@@ -254,16 +254,16 @@ Le handler n'est déclenché que si une tâche l'ayant notifié a produit un cha
         state: restarted
 ```
 
-> L'option `cache_valid_time: 3600` permet de ne déclencher un `apt update` que si le cache des paquets n'a pas été rafraîchi depuis plus d'une heure. Ansible adapte automatiquement les noms de paquets en fonction du système d'exploitation cible, ce qui est très pratique :
+> The `cache_valid_time: 3600` option only triggers an `apt update` if the package cache hasn't been refreshed in the last hour.
 
-#### Playbook MySQL
+#### MySQL playbook
 
-Ici on écrit un Playbook pour installer le rôle MySQL, avec quelques détails :
+Here we write a playbook that installs MySQL, with a few details:
 
-* Le mot de passe est volontairement écrit en dur (`1234`) (uniquement dans un contexte de lab évidemment).
-* La connexion passe par `login_unix_socket` car MySQL n'accepte plus par défaut l'authentification classique par mot de passe. En passant par une socket locale permet de contourner cette limitation.
-* La base de données `test`, créée par défaut lors de l'installation, est supprimée.
-* Même si plusieurs tâches notifient le handler `demarrer mysql`, celui-ci ne s'exécute qu'une seule fois, à la fin du playbook.
+* The password is deliberately hardcoded (`1234`), for a lab context only, obviously.
+* The connection goes through `login_unix_socket` because, by default, MySQL's root account no longer accepts classic password authentication. Connecting through the local socket works around this.
+* The `test` database, created by default during installation, is removed.
+* Even though several tasks notify the `demarrer mysql` handler, it only runs once, at the end of the playbook.
 
 ```yaml
 ---
@@ -315,27 +315,23 @@ Ici on écrit un Playbook pour installer le rôle MySQL, avec quelques détails 
         state: restarted
 ```
 
-#### Ansible Galaxy et passage aux rôles
+#### Ansible Galaxy and moving to roles
 
-On a nos playbooks fonctionnels et reproductibles à volonté.
+Our playbooks work and can be replayed at will. However, merging everything into a single playbook to deploy from one file quickly makes it unreadable, and prevents deploying only part of the infrastructure, such as the web layer alone. We need modularity, which means moving to what Ansible calls roles.
 
-Cependant, si on veut fusionner l'ensemble des actions dans un seul et même playbook pour pouvoir déployer à partir d'un seul fichier le rend rapidement illisible et empêche de ne déployer qu'une partie de l'infrastructure, comme uniquement la partie web par exemple.
+An **Ansible role** is an **organized set of files** that groups everything needed for one piece of functionality.
 
-On a alors besoin de modularité, ce qui implique de passer à ce que l'on appel des rôles.
+For example, a `web` role can contain:
 
-Un **rôle Ansible (Ansible Role)** est un **ensemble organisé de fichiers** permettant de regrouper toutes les ressources nécessaires à une même fonctionnalité.
+* the tasks that install Apache and PHP (`tasks/`);
+* the handlers that restart Apache (`handlers/`);
+* variables (`vars/`);
+* configuration files (`files/`);
+* Jinja2 templates (`templates/`).
 
-Par exemple, un rôle `web` peut contenir :
+Instead of one huge playbook, the infrastructure is split into **reusable building blocks**.
 
-* les tâches d'installation d'Apache et PHP (`tasks/`) ;
-* les handlers pour redémarrer Apache (`handlers/`) ;
-* les variables (`vars/`) ;
-* les fichiers de configuration (`files/`) ;
-* les templates Jinja2 (`templates/`).
-
-Au lieu d'avoir un énorme playbook, on découpe l'infrastructure en **briques réutilisables**.
-
-Les squelettes de rôles sont générés avec `ansible-galaxy` :
+Role skeletons are generated with `ansible-galaxy`:
 
 ```bash
 ansible-galaxy init web
@@ -344,7 +340,7 @@ ansible-galaxy init mysql
 - Role mysql was created successfully
 ```
 
-Chaque rôle génère automatiquement l'arborescence adéquate :
+Each role automatically gets the appropriate structure:
 
 ```
 web/
@@ -359,7 +355,7 @@ web/
 └── vars/
 ```
 
-Le contenu des playbooks initiaux est ensuite réparti dans les fichiers `main.yml` correspondants, à l'intérieur de chaque rôle :
+The content of the original playbooks is then split into the matching `main.yml` files inside each role:
 
 **`web/tasks/main.yml`**
 
@@ -475,7 +471,7 @@ Le contenu des playbooks initiaux est ensuite réparti dans les fichiers `main.y
 nom_bdd: cocadmin
 ```
 
-Un playbook englobant est alors créé pour appeler ces deux rôles :
+A top-level playbook is then created to call both roles:
 
 ```yaml
 ---
@@ -483,9 +479,9 @@ Un playbook englobant est alors créé pour appeler ces deux rôles :
 - import_playbook: mysql
 ```
 
-#### Erreur rencontrée et correction : dossier `roles/`
+#### Error and fix: the `roles/` directory
 
-En lançant directement ce playbook englobant, l'exécution échoue : Ansible s'attend à trouver un fichier à l'emplacement indiqué, mais tombe sur un dossier :
+Running this top-level playbook directly fails: Ansible expects a file at the given path, but finds a directory:
 
 ```bash
 ansible-playbook lamp.yaml
@@ -495,7 +491,7 @@ ERROR! an error occurred while trying to read the file '/home/ubuntu/ansible-pla
 [Errno 21] Is a directory: b'/home/ubuntu/ansible-playbooks/web'
 ```
 
-En effet les rôles doivent impérativement se trouver dans un dossier nommé `roles/` pour être trouvés par `import_playbook`. Il faut donc les déplacer dans un dossier `roles/` créé à cet effet.
+By default, Ansible looks for roles in a `roles/` directory next to the playbook, so we move them into a dedicated `roles/` folder:
 
 ```bash
 mkdir roles
@@ -503,7 +499,7 @@ mv web/ roles/
 mv mysql/ roles/
 ```
 
-Une fois l'arborescence corrigée, l'ensemble de l'infrastructure peut être déployée en une seule commande :
+Once the structure is fixed, the whole infrastructure can be deployed with a single command:
 
 ```bash
 ansible-playbook -i inventory lamp.yaml

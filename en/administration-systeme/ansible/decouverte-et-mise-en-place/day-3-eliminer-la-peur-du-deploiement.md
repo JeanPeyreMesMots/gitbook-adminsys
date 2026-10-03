@@ -1,37 +1,37 @@
-# 3 - Éliminer la peur de déploiement
+# 3 - Eliminating the fear of deployment
 
-L'objectif est de pouvoir déployer sereinement, que ce soit un vendredi ou un week-end, sans craindre de casser la prod.
+The goal is to be able to deploy with confidence, even on a Friday afternoon, without fear of breaking production.
 
-* **Plus il y a de changements accumulés entre deux déploiements, plus il devient difficile d'identifier la source d'un problème** si quelque chose se passe mal.
-* Plus le délai entre le développement d'une fonctionnalité et sa mise en production est long, plus l'organisation perd en réactivité. Ce soucis se nomme d'ailleurs le "**time-to-market**".
-* **Gmail** par exemple déploie des centaines de fois par jour. Cette pratique permet de développer une réelle confiance dans la fiabilité de l'infrastructure.
-* Ansible permet ainsi de gérer ces déploiements de manière fiable et reproductible.
+* **The more changes pile up between two deployments, the harder it becomes to pinpoint the source of a problem** when something goes wrong.
+* The longer the delay between developing a feature and shipping it to production, the less responsive the organization becomes. This delay is known as **time-to-market**.
+* Some large companies, such as Google with **Gmail**, deploy very frequently, which builds real confidence in the reliability of their infrastructure.
+* Ansible makes it possible to handle these deployments in a reliable and reproducible way.
 
-#### Erreurs à éviter lors d'un déploiement :
+#### Mistakes to avoid when deploying:
 
 <div align="left"><figure><img src="../../../.gitbook/assets/image (31).png" alt="" width="175"><figcaption></figcaption></figure></div>
 
-* Éviter tout déploiement manuel : cela ouvre systématiquement la porte à des erreurs humaines.
-* Éviter les longs intervalles entre deux déploiements. Lorsqu'on souhaite mettre à jour uniquement le load balancer ou uniquement une partie du code, il faut pouvoir ne déployer que ce changement précis, sans embarquer d'autres modifications.
-* Éviter de déployer le week-end ou la nuit. C'est le pire moment possible : personne ne travaille, et la nuit ouvre la porte à des problèmes qui ne seront détectés que tardivement.
+* Avoid any manual deployments, always opens the door to human error.
+* Avoid long gaps between deployments. When you only want to update the load balancer, or only part of the code, you should be able to deploy just that change, without bundling other modifications.
+* Avoid deploying at night or on weekends. It's the worst possible time: nobody is around, and problems may only be noticed much later.
 
-#### Règles à suivre
+#### Rules to follow
 
 <div align="left"><figure><img src="../../../.gitbook/assets/image (34).png" alt="" width="125"><figcaption></figcaption></figure></div>
 
-* Tout changements/correctifs se règle une bonne fois pour toutes dans le playbook, qui se redéploie partout de façon identique.
-* Les changements doivent être versionnés dans Git pour une traçabilité fine de chaque modification.
-* Augmenter progressivement la fréquence des déploiements : par exemple passer d'un déploiement mensuel, à hebdomadaire, puis quotidien, afin de fluidifier le processus.
-* Privilégier des déploiements minimes, réalisables rapidements. Ils sont plus faciles à valider ou corriger en cas de problème.
-* Découper un déploiement en plusieurs étapes si nécessaire, par exemple mettre à jour la base de données avant l'application, en adaptant le calendrier au besoin (un changement le matin, un autre l'après-midi).
-* Déployer en journée, lorsque tout le monde est présent pour vérifier que tout fonctionne correctement, plutôt qu'à 4h du matin ou le week-end.
-* Privilégier un déploiement de type **blue/green** pour éviter tout downtime technique : une nouvelle infrastructure est déployée avec la nouvelle version de l'application, avant que le trafic soit redirigé progressivement vers cette nouvelle infrastructure.
+* Every change or fix is made once and for all in the playbook, which is then redeployed identically everywhere.
+* Changes are versioned in Git, for detailed traceability of every modification.
+* Gradually increase deployment frequency: for example, go from monthly to weekly, then daily deployments, to make the process smoother.
+* Prefer small deployments that can be done quickly. They are easier to validate, or to fix if something goes wrong.
+* Split a deployment into several steps if needed, for example updating the database before the application, and adapt the schedule accordingly (one change in the morning, another one in the afternoon).
+* Deploy during working hours, when everyone is around to check that everything works, rather than at 4 a.m. or on a weekend.
+* Prefer a **blue/green** deployment to avoid any technical downtime: a new infrastructure is deployed with the new version of the application, then traffic is gradually switched over to it.
 
-#### 1. Mise en place du déploiement de l'application
+#### 1. Setting up the application deployment
 
-L'objectif est de déployer une application "todo list" sans aucun impact pour les utilisateurs.
+The goal is to deploy a "todo list" web application with no impact on users.
 
-Création du playbook `deploy.yml` :
+Creating the `deploy.yml` playbook:
 
 ```yaml
 ---
@@ -40,14 +40,14 @@ Création du playbook `deploy.yml` :
     - deploy
 ```
 
-Création du rôle correspondant avec `ansible-galaxy` :
+Creating the matching role with `ansible-galaxy`:
 
 ```bash
 ansible-galaxy init deploy
 - Role deploy was created successfully
 ```
 
-L'arborescence du dossier de travail se présente alors ainsi :
+The working directory now looks like this:
 
 ```bash
 ubuntu@ansible-main:~/ansible-playbooks$ ll
@@ -62,11 +62,11 @@ drwxrwxr-x 5 ubuntu ubuntu 4096 Jul 23 23:18 roles/
 -rw-rw-r-- 1 ubuntu ubuntu   29 Jul 23 17:32 web.yml
 ```
 
-#### 2. Récupération de l'application via le module `git`
+#### 2. Fetching the application with the `git` module
 
-L'application est récupérée depuis son dépôt GitLab (`https://gitlab.com/ttwthomas/app-example-php`) à l'aide du module `git`.&#x20;
+The example application used in the course is fetched from its GitLab repository (`https://gitlab.com/ttwthomas/app-example-php`) with the `git` module.&#x20;
 
-La tâche est écrite dans le `main.yml` du rôle `deploy`, avec un mécanisme de contrôle permettant de cloner le dépôt et d'importer la base de données de façon idempotente, sans rejouer l'import inutilement.
+The task goes in the `main.yml` of the `deploy` role, with a check that clones the repository and imports the database idempotently, without replaying the import for nothing.
 
 ```yaml
 ---
@@ -98,9 +98,9 @@ La tâche est écrite dans le `main.yml` du rôle `deploy`, avec un mécanisme d
   when: git_repo.changed
 ```
 
-#### 3. Bug rencontré : résultat HTML tronqué
+#### 3. Bug: raw source code instead of the rendered page
 
-Le déploiement fonctionne, mais un curl sur la page de test retourne une réponse HTML tronqué sur les deux serveurs :
+The deployment works, but a curl on the test page returns the raw source on both servers:
 
 ```bash
 ubuntu@web-server-1:~$ curl localhost/app/index.php
@@ -124,19 +124,19 @@ define('DB_USER', 'cocadmin');
 [...]
 ```
 
-> Note : ce comportement (le code PHP n'est pas interprété et s'affiche tel quel) sera résolu plus loin, en corrigeant l'activation du module PHP dans Apache (voir section 7).
+> Note: this behavior (the PHP code is not interpreted and is returned as is) is fixed later by enabling the PHP module in Apache (see section 7).
 
-#### 4. Mise en place d'un load balancer HAProxy
+#### 4. Setting up an HAProxy load balancer
 
-**HAProxy** est utilisé pour répartir efficacement la charge entre les deux serveurs web.
+**HAProxy** is used to spread the load efficiently across the two web servers.
 
-Le principe : le client envoie une requête au load balancer, qui répartit la charge entre les deux serveurs. Pendant un déploiement, HAProxy redirige le traffic vers un seul serveur pour garantir la disponibilité du service pendant que l'autre est mis à jour.
+The principle: the client sends a request to the load balancer, which distributes the load between the two servers. During a deployment, HAProxy sends traffic to a single server so the service stays available while the other one is being updated.
 
-Le serveur en cours de déploiement est retiré du load balancer ; toutes les nouvelles requêtes sont alors envoyées vers l'autre serveur. Une fois la mise à jour vérifiée, ce serveur est remis dans le load balancer et l'autre en est retiré à son tour pour être mis à jour. Le trafic continue ainsi d'être servi sans downtime.
+The server being deployed is removed from the load balancer, and all new requests go to the other server. Once the update is verified, that server is put back into the load balancer, and the other one is removed in turn to be updated. Traffic keeps being served with no downtime.
 
-Plutôt que d'écrire une recette de zéro, un rôle existant est utilisé depuis Ansible Galaxy : [`geerlingguy.haproxy`](https://galaxy.ansible.com/ui/standalone/roles/geerlingguy/haproxy/).
+Rather than writing everything from scratch, we use an existing role from Ansible Galaxy, by Jeff Geerling: [`geerlingguy.haproxy`](https://galaxy.ansible.com/ui/standalone/roles/geerlingguy/haproxy/).
 
-On installe ce dernier :
+We install it:
 
 ```bash
 ubuntu@ansible-main:~/ansible-playbooks$ ansible-galaxy role install geerlingguy.haproxy
@@ -148,7 +148,7 @@ Starting galaxy role install process
 - geerlingguy.haproxy (1.3.2) was installed successfully
 ```
 
-> Note : par défaut, les rôles installés via Ansible Galaxy sont placés dans `/home/USER/.ansible/roles/` :
+> Note: by default, roles installed with Ansible Galaxy go to `/home/USER/.ansible/roles/`:
 
 ```bash
 ~/.ansible/roles$ ll
@@ -158,7 +158,7 @@ drwxrwxr-x 6 ubuntu ubuntu 4096 Jul 27 16:05 ../
 drwxrwxr-x 9 ubuntu ubuntu 4096 Jul 27 16:05 geerlingguy.haproxy/
 ```
 
-On créé ensuite une variable que l'on met dans `ansible.cfg` pointant vers un dossier local où se trouvera chaque rôle installé via Ansible Galaxy :
+We then set `roles_path` in `ansible.cfg`, pointing to a local folder where every role installed from Ansible Galaxy will live:
 
 ```ini
 [defaults]
@@ -167,9 +167,9 @@ retry_files_enabled = False
 roles_path = /home/ubuntu/ansible-playbooks/
 ```
 
-#### 5. Configuration du rôle HAProxy
+#### 5. Configuring the HAProxy role
 
-Le rôle expose de nombreuses variables par défaut, consultables dans `roles/geerlingguy.haproxy/defaults/main.yml` :
+The role exposes many default variables, listed in `roles/geerlingguy.haproxy/defaults/main.yml`:
 
 ```yaml
 ---
@@ -197,9 +197,9 @@ haproxy_backend_servers: []
 #   address: 192.168.0.2:80
 ```
 
-Un playbook `haproxy.yaml` est créé pour surcharger ces variables avec les deux serveurs web réels :
+A `haproxy.yaml` playbook is created to override these variables with the two real web servers:
 
-```c
+```yaml
 ---
 - hosts: lb-host
   vars:
@@ -220,7 +220,7 @@ Un playbook `haproxy.yaml` est créé pour surcharger ces variables avec les deu
         state: absent
 ```
 
-Cependant, quelque chose nous embête. Ces variables sont ensuite injectées dans le template Jinja2 du rôle, situé dans `roles/geerlingguy.haproxy/templates/haproxy.cfg.j2` :
+However, one thing bothers us. These variables are injected into the role's Jinja2 template, located in `roles/geerlingguy.haproxy/templates/haproxy.cfg.j2`:
 
 ```jinja2
 {% endif %}
@@ -228,15 +228,15 @@ Cependant, quelque chose nous embête. Ces variables sont ensuite injectées dan
 {% for backend in haproxy_backend_servers %}
 ```
 
-Cette ligne fait qu'à la première connexion, le load balancer assigne le client à un serveur précis et lui fournit un cookie, afin qu'il reste toujours connecté au même serveur par la suite. Or cela cause un agacement : si le client envoie une requête à un autre serveur, il reçoit un cookie différent, ce qui génère des bugs difficiles à tester et à déboguer.
+This line makes the load balancer pin each client to a given server on the first connection and hand it a cookie, so the client keeps hitting the same server afterwards (sticky sessions). That gets annoying here: if a request ends up on another server, the client gets a different cookie, which causes bugs that are hard to reproduce and debug.
 
-Cette fonctionnalité est donc désactivée, d'où le "**state: absent**" dans le playbook afin que les requêtes puissent être réparties librement entre les deux serveurs (sinon, le client serait systématiquement redirigé vers le même serveur).
+So this feature is disabled, hence the "**state: absent**" in the playbook, so that requests can be spread freely across both servers (otherwise, a client would always be sent to the same server).
 
-> Note : la bonne pratique consisterait à gérer ce comportement directement dans le code applicatif, via une gestion de session partagée (pool de requêtes conditionnée), pour rendre le code réellement modulable. Faute de temps, la suppression via regex a été retenue ici.
+> Note: the proper approach would be to handle this in the application itself, with shared session storage, so the code doesn't depend on which server handles the request. For lack of time, removing the line with a regex was chosen here.
 
-#### 6. Conflit de port entre HAProxy et Apache
+#### 6. Port conflict between HAProxy and Apache
 
-Le déploiement du playbook HAProxy échoue :
+Running the HAProxy playbook fails:
 
 ```bash
 TASK [geerlingguy.haproxy : Ensure HAProxy is started and enabled on boot.] ***************
@@ -244,7 +244,7 @@ fatal: [web-server-1]: FAILED! => {"changed": false, "msg": "Unable to start ser
 fatal: [web-server-2]: FAILED! => {"changed": false, "msg": "Unable to start service haproxy: Job for haproxy.service failed because the control process exited with error code.\nSee \"systemctl status haproxy.service\" and \"journalctl -xeu haproxy.service\" for details.\n"}
 ```
 
-Les logs révèlent la cause :
+The logs reveal the cause:
 
 ```bash
 journalctl -xeu haproxy.service --no-pager -n 50 | grep "cannot "
@@ -252,7 +252,7 @@ journalctl -xeu haproxy.service --no-pager -n 50 | grep "cannot "
 Jul 27 17:31:31 web-server-1 haproxy[3387]: [ALERT]    (3387) : Starting frontend hafrontend: cannot bind socket (Address already in use) [0.0.0.0:80]
 ```
 
-On peut voir ici que HAProxy et Apache tentent tous deux d'écouter sur le port 80 de la même machine, ce qui est impossible. Apache est déjà présent et actif sur ce port :
+HAProxy and Apache are both trying to listen on port 80 on the same machine, which is impossible. Apache is already running on that port:
 
 ```bash
 ubuntu@web-server-1:~$ sudo ss -tulnp 
@@ -261,17 +261,17 @@ tcp     LISTEN    0         511                          *:80                   
 tcp     LISTEN    0         128                       [::]:22                  [::]:*       users:(("sshd",pid=656,fd=4))            
 ```
 
-Il serait possible de faire écouter HAProxy sur un autre port (par exemple 8080), ou bien changer le port du serveur web. Mais ça n'a pas de sens de placer HAProxy en frontal sur la même machine que les services qu'il équilibre. On va donc créer une VM dédiée pour HAProxy, plus simple et plus propre.
+We could make HAProxy listen on another port (for example 8080), or change the web server's port. But it makes no sense to put HAProxy in front on the same machine as the services it balances. So we create a dedicated VM for HAProxy, which is simpler and cleaner.
 
-Une nouvelle VM est créée avec Multipass, de façon analogue aux autres VM créées précédemment :
+A new VM is created with Multipass, just like the previous ones:
 
 ```bash
 multipass launch 22.04 -n lb-server -c 1 -m 3G
 ```
 
-On rejoue ensuite la même configuration que pour l'étape 1 : autorisation de connexion SSH en root, configuration d'Ansible, ajout dans `/etc/hosts`, ajout du nom de la VM dans le script cron de synchronisation DHCP, etc...
+We then repeat the same setup as in step 1: allowing root SSH login, configuring Ansible access, adding it to `/etc/hosts`, adding the VM name to the DHCP sync cron script, etc.
 
-L'inventory est ensuite mis à jour pour ajouter un groupe commun  `all_servers`, ce qui évite les problèmes de connexion à la nouvelle VM :
+The inventory is then updated with a common `all_servers` group, which avoids connection problems with the new VM:
 
 ```ini
 [web]
@@ -292,16 +292,16 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ansible_python_interpreter=/usr/bin/python3.10
 ```
 
-#### 7. Correction du rôle web
+#### 7. Fixing the web role
 
-En relisant le `main.yml` du rôle web, j'ai remarqué plusieurs défauts :
+Rereading the `main.yml` of the web role, I noticed several issues:
 
-* l'usage de `add-apt-repository` au lieu du module dédié `apt_repository` ;
-* l'absence d'un `apt update` avant l'installation des paquets ;
-* un mélange incohérent entre les versions PHP 7.2 et 7.3 ;
-* une activation du module PHP dans Apache, non spécifié dans le playbook, et nécessaire dans notre cas.
+* using `add-apt-repository` instead of the dedicated `apt_repository` module;
+* no `apt update` before installing packages;
+* an inconsistent mix of PHP 7.2 and 7.3 packages;
+* the PHP module was never enabled in Apache by the playbook, which is required in our case.
 
-Le rôle est donc corrigé pour gagner en idempotence et harmoniser les versions de paquets :
+The role is fixed to be more idempotent and to align package versions:
 
 ```yaml
 ---
@@ -364,11 +364,11 @@ Le rôle est donc corrigé pour gagner en idempotence et harmoniser les versions
   notify: restart apache
 ```
 
-On résout le bug de troncature observé plus tôt : le code PHP est désormais correctement interprété par Apache plutôt que renvoyé tel quel au navigateur :)
+This also fixes the bug seen earlier: the PHP code is now interpreted by Apache instead of being sent as is to the browser :)
 
-#### 8. Déploiement final du load balancer
+#### 8. Final load balancer deployment
 
-Le playbook HAProxy peut désormais être exécuté avec succès :
+The HAProxy playbook now runs successfully:
 
 ```bash
 ansible-playbook -i inventory haproxy.yaml
@@ -409,10 +409,10 @@ PLAY RECAP *********************************************************************
 lb-server                  : ok=9    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 ```
 
-L'application est désormais fonctionnelle sur les deux serveurs, avec le trafic correctement réparti par le load balancer.
+The application now works on both servers, with traffic properly distributed by the load balancer.
 
 <figure><img src="../../../.gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../../../.gitbook/assets/image (35).png" alt=""><figcaption></figcaption></figure>
 
-Le contenu affiché diffère volontairement d'un serveur à l'autre, puisque chacun héberge sa propre base de données MySQL locale. Il serait possible d'unifier ce comportement en mettant la base sur une autre VM et accessible par les deux serveurs web, ou en mettant en place une réplication entre les deux bases.
+The content shown differs from one server to the other on purpose, since each one hosts its own local MySQL database. This could be unified by moving the database to a separate VM reachable by both web servers, or by setting up replication between the two databases.

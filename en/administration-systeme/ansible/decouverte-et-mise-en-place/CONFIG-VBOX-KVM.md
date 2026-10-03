@@ -1,30 +1,30 @@
 ---
 description: >-
-  Mise en place d'un lab avec VM Multipass KVM hosted > une VM Ubuntu >
-  VirtualBox > Windows 11.
+  Setting up a lab with Multipass VMs (KVM) hosted > in an Ubuntu VM >
+  on VirtualBox > on Windows 11.
 ---
 
-# Mise en place du lab
+# Setting up the lab
 
-J'avais une VM Ubuntu sur VirtualBox de déjà installé sur mon PC. Il faut d'abord l'arrêter complètement :
+I already had an Ubuntu VM installed on VirtualBox on my PC. First, it needs to be fully shut down:
 
 ```bash
 sudo poweroff
 ```
 
-Tout d'abord il est nécessaire d'activer la virtualisation imbriquée. Cette étape est nécessaire puisque l'on va lancer des VM Multipass dans une VM Ubuntu. On ouvre donc un **PowerShell** en administrateur, puis on se rend dans le répertoire d'installation de VBox où se trouve les binaires :
+Next, nested virtualization must be enabled. This is required because we will run Multipass VMs inside an Ubuntu VM. We open **PowerShell** as administrator and go to the VirtualBox installation directory, where the binaries are located:
 
 ```powershell
 cd "C:\Program Files\Oracle\VirtualBox"
 ```
 
-On active **Nested VT-x** :
+We enable **Nested VT-x**:
 
 ```powershell
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nested-hw-virt on
 ```
 
-Et **Nested Paging** :
+And **Nested Paging**:
 
 ```powershell
 .\VBoxManage.exe modifyvm "Ubuntu-JPMM-CLONADO" --nestedpaging on
@@ -34,7 +34,7 @@ Et **Nested Paging** :
 .\VBoxManage.exe showvminfo "Ubuntu-JPMM-CLONADO" | Select-String "Nested VT-x","Nested Paging","Hardware Virtualization"
 ```
 
-Résultat attendu :
+Expected result:
 
 ```
 Nested VT-x/AMD-V: enabled
@@ -50,39 +50,39 @@ Ubuntu-JPMM-CLONADO
            └── Processeur : 2 CPU
 ```
 
-Puis activer les options suivante :
+Then enable the following options in the VM settings:
 
 ```
 [x] Activer VT-x/AMD-V
 [x] Pagination imbriquée
 ```
 
-On démarre ensuite la VM de Ubuntu, puis on vérifie le module kvm qui doit être activé pour transformer Linux en hyperviseur et ainsi exécuter Multipass :
+We then start the Ubuntu VM and check that the KVM module is loaded, allows Linux to run into a hypervisor, which Multipass needs:
 
 ```bash
 lsmod | grep kvm
 ```
 
-On y aperçoit :
+We can see:
 
 ```
 kvm
 irqbypass
 ```
 
-Puis on vérifie que KVM est exposé :
+Then we check that KVM is exposed:
 
 ```bash
 ls -l /dev/kvm
 ```
 
-Ce qui est bien le cas :
+Which is indeed the case:
 
 ```
 crw-rw----+ 1 root kvm ... /dev/kvm
 ```
 
-On peut aussi tester avec cpu-checker par exemple pour voir si on obtient une sortie avec marqué "**kvm-ok**" dedans &#x20;
+We can also double-check with cpu-checker, which should confirm that KVM acceleration is available:
 
 ```bash
 sudo apt update
@@ -90,14 +90,14 @@ sudo apt install cpu-checker
 kvm-ok
 ```
 
-Résultat :
+Result:
 
 ```
 INFO: /dev/kvm exists
 KVM acceleration can be used
 ```
 
-On peut maintenant installer Multipass et déployer nos VM :
+We can now install Multipass and deploy our VMs:
 
 ```bash
 sudo snap install multipass
@@ -128,13 +128,13 @@ multipass launch 22.04 \
 -m 1G
 ```
 
-On vérifie ensuite la liste des VM pour voir si elles obtiennent une IP et sont bien lancées :
+We then list the VMs to check that they are running and have an IP:
 
 ```bash
 multipass list
 ```
 
-Exemple :
+Example:
 
 ```
 Name            State      IPv4
@@ -143,51 +143,51 @@ web-server-1    Running    10.3.241.50
 web-server-2    Running    10.3.241.60
 ```
 
-### Note : si Multipass casse après un crash
+### Note: if Multipass breaks after a crash
 
-Nettoyer toutes les VM :
+Clean up all VMs:
 
 ```bash
 multipass delete --all
 multipass purge
 ```
 
-Puis vérifier que tout est partie :
+Then check that everything is gone:
 
 ```bash
 multipass list
 ```
 
-Si on tombe sur cette erreur :
+If you get this error:
 
 ```
 launch failed:
 KVM support is not enabled on this machine
 ```
 
-Cela vient du fait que la pagination : Nested VT-x est parfois désactivé.
+It's because nested virtualization (Nested VT-x) sometimes gets disabled.
 
-Vérifier depuis Windows :
+Check from Windows:
 
 ```powershell
 .\VBoxManage.exe showvminfo "NOM_VM_VBOX" | Select-String "Nested"
 ```
 
-Si on vois :
+If you see:
 
 ```
 Nested VT-x/AMD-V: disabled
 Nested Paging: disabled
 ```
 
-Refaire comme plus haut :
+Run the same commands as above again:
 
 ```powershell
 .\VBoxManage.exe modifyvm "NOM_VM_VBOX" --nested-hw-virt on
 .\VBoxManage.exe modifyvm "NOM_VM_VBOX" --nestedpaging on
 ```
 
-La bonne configuration finale doit être :
+The correct final configuration should be:
 
 ```
 VirtualBox
@@ -196,4 +196,4 @@ VirtualBox
  └── Nested Paging       ON
 ```
 
-On a maintenant un **mini cluster Ansible de labo dans une VM VirtualBox**, avec KVM accéléré au lieu d'une émulation lente. C'est le bon chemin, avec toutefois les paramètres de couche de virtualisation imbriquée à vérifier.
+We now have a **mini Ansible lab cluster inside a VirtualBox VM**, with hardware-accelerated KVM instead of slow emulation. It works well, as long as you keep an eye on the nested virtualization settings.

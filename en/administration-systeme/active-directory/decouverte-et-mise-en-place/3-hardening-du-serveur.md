@@ -1,104 +1,104 @@
-# 3 - Hardening du serveur
+# 3 - Hardening the server
 
-Étant intéressé par la cybersécurité, je me suis intéressé par la sécurité de l'AD déjà déployé.. On va utiliser Ping Castle va nous permettre. Un scan Ping Castle lancé sur le domaine directement nous donne un mauvais score :
+Since I'm into cybersecurity, I wanted to assess how secure my freshly deployed AD, as AD remains a critical point in infrastructure, using PingCastle. A first scan of the domain gives a poor score:
 
 <figure><img src="../../../.gitbook/assets/image (117).png" alt=""><figcaption></figcaption></figure>
 
-Ce qui est courant sur une conf par défaut quand on installe. De nombreux points d'améliorations sont évoqués :
+That's typical of a default installation. The report raises many points:
 
-| Risk model                       | Score | Raison affichée dans le rapport                                                                                                                                                                                                                                                                                                                                   |
-| -------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Anomalies**                    | 70    | Le spooler est accessible à distance depuis 1 DC, et LAPS n’est pas installé ; d’autres mitigations ASR ne sont pas toutes activées [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                               |
-| **Privileged accounts**          | 40    | Présence de comptes admin non protégés par l’option “sensitive and cannot be delegated” [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                           |
-| **Stale Objects**                | 31    | Un seul DC, dernière sauvegarde AD il y a 20 jours, et d’autres règles sur les objets “stale” [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                     |
-| **Pass-the-credential**          | 25    | Le spooler est accessible à distance depuis 1 DC, ce qui augmente le risque de vol/réutilisation d’identifiants [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                   |
-| **Account take over**            | 20    | Présence de comptes admin non sensibles à la délégation [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                                                           |
-| **Backup**                       | 20    | Nombre insuffisant de DC pour la redondance, et dernière sauvegarde AD trop ancienne [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                              |
-| **Irreversible change**          | 20    | OU sans protection contre la suppression accidentelle, Schema Admins non vide, Recycle Bin non activée [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                            |
-| **Old authentication protocols** | 15    | Le paramètre LAN Manager autorise NTLMv1 ou LM [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                                                                    |
-| **Audit**                        | 10    | L’audit PowerShell n’est pas complètement activé, et l’audit des DC ne collecte pas certains événements clés [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                      |
-| **Local group vulnerability**    | 10    | Les utilisateurs non-admin peuvent ajouter jusqu’à 10 ordinateurs au domaine [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                                      |
-| **Provisioning**                 | 10    | Le mot de passe de certains comptes n’expire jamais, et le niveau de sécurité des mots de passe est insuffisant [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                   |
-| **Weak password**                | 10    | Pas de politique de mot de passe pour les comptes de service, et au moins une politique avec longueur inférieure à 8 caractères [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                   |
-| **Network topography**           | 5     | Risque d’exécution de scripts Internet depuis les DC, et un subnet DC manque dans la déclaration [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                  |
-| **Network sniffing**             | 5     | Hardened Paths ont été abaissés, et LLMNR n’est pas désactivé partout [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                                                                                                             |
-| **Object configuration**         | 1     | Defender ASR n’est pas entièrement en mode Block/Warn, certaines options de fichiers sont risquées, Kerberos Armoring est à vérifier, et Terminal Services GPO n’est pas conforme [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html). |
-| **Reconnaissance**               | 0     | DsHeuristics ne mitige pas CVE-2021-42291, NetCease n’est pas trouvé, PreWin2000 contient “Authenticated Users”, et Anonymous Binding au rootDSE est activé [ad\_hc\_mesmots.local.html](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/344793290/e55608b6-bc95-4ce6-a6f1-f30b86f093ad/ad_hc_mesmots.local.html).                       |
+| Risk model                       | Score | Reason shown in the report                                                                                                                                              |
+| -------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Anomalies**                    | 70    | The spooler is reachable remotely from 1 DC, LAPS is not installed, and some other ASR mitigations are not enabled.                                                     |
+| **Privileged accounts**          | 40    | Admin accounts are not protected by the "sensitive and cannot be delegated" option.                                                                                     |
+| **Stale Objects**                | 31    | Only one DC, last AD backup 20 days ago, and other rules on "stale" objects.                                                                                            |
+| **Pass-the-credential**          | 25    | The spooler is reachable remotely from 1 DC, which increases the risk of credential theft/reuse.                                                                        |
+| **Account take over**            | 20    | Admin accounts are not marked as sensitive to delegation.                                                                                                               |
+| **Backup**                       | 20    | Not enough DCs for redundancy, and the last AD backup is too old.                                                                                                       |
+| **Irreversible change**          | 20    | OUs without protection against accidental deletion, Schema Admins not empty, Recycle Bin not enabled.                                                                   |
+| **Old authentication protocols** | 15    | The LAN Manager setting allows NTLMv1 or LM.                                                                                                                            |
+| **Audit**                        | 10    | PowerShell auditing is not fully enabled, and DC auditing does not collect some key events.                                                                             |
+| **Local group vulnerability**    | 10    | Non-admin users can add up to 10 computers to the domain.                                                                                                               |
+| **Provisioning**                 | 10    | The password of some accounts never expires, and the password security level is insufficient.                                                                           |
+| **Weak password**                | 10    | No password policy for service accounts, and at least one policy with a length under 8 characters.                                                                      |
+| **Network topography**           | 5     | Risk of Internet scripts running from DCs, and a DC subnet is missing from the declaration.                                                                             |
+| **Network sniffing**             | 5     | Hardened Paths have been lowered, and LLMNR is not disabled everywhere.                                                                                                 |
+| **Object configuration**         | 1     | Defender ASR is not fully in Block/Warn mode, some file options are risky, Kerberos Armoring needs checking, and the Terminal Services GPO is not compliant.             |
+| **Reconnaissance**               | 0     | DsHeuristics does not mitigate CVE-2021-42291, NetCease is not found, PreWin2000 contains "Authenticated Users", and Anonymous Binding to the rootDSE is enabled.        |
 
-On va donc régler tout ça 😎
+So let's fix all of that 😎
 
-### Désactiver NTLM :
+### Disabling NTLM:
 
-NTLM n'a plus besoin d'être présenté comme ayant besoin d'être désactivé, il est obsolète et facilement utilisable dans les attaques NTLM Relay. On peut désactiver l'authentification NTLM via la GPO suivante :
+Disabling NTLM is a well-known recommendation: it is obsolete and easily abused in NTLM Relay attacks. We can disable NTLM authentication with the following GPO:
 
 <figure><img src="../../../.gitbook/assets/image (118).png" alt=""><figcaption></figcaption></figure>
 
-Il faut aussi appliquer ce paramètres, pour que NTMLv2 ne soit utilisé que au niveau LAN Manager :
+We also set the LAN Manager authentication level so that only NTLMv2 is accepted:
 
 <figure><img src="../../../.gitbook/assets/image (119).png" alt=""><figcaption></figcaption></figure>
 
-On vérifie dans l'état de la GPO :
+We check that the GPO is applied:
 
 <figure><img src="../../../.gitbook/assets/image (120).png" alt=""><figcaption></figcaption></figure>
 
-Le stale object passe ensuite de 31/100 à :
+The Stale Objects score then goes from 31/100 to:
 
 <figure><img src="../../../.gitbook/assets/image (121).png" alt=""><figcaption></figcaption></figure>
 
-C'est déjà mieux ! Mais continuons.
+Better already! Let's keep going.
 
-### Activer le flag anti délégation pour le compte admin :
+### Enabling the anti-delegation flag for the admin account:
 
 <figure><img src="../../../.gitbook/assets/image (122).png" alt=""><figcaption></figcaption></figure>
 
-Cela permet d'éviter qu'un service compromis vole le TGT Kerberos de l'Admin. Le stale object en question a diminué ainsi :
+This prevents a compromised service from stealing the Admin's Kerberos TGT through delegation. The related score drops as follows:
 
 <figure><img src="../../../.gitbook/assets/image (123).png" alt=""><figcaption></figcaption></figure>
 
-### Protection contre la suppression accidentelle des OU :
+### Protection against accidental deletion of OUs:
 
-Les OU suivantes n'ont pas le flag anti delete activés :
+The following OUs do not have the anti-delete flag enabled:
 
 <figure><img src="../../../.gitbook/assets/image (124).png" alt=""><figcaption></figcaption></figure>
 
-On l'active donc pour toutes les OU :
+So we enable it for all OUs:
 
 ```powershell
 Get-ADOrganizationalUnit -Filter * | Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion $true
 ```
 
-### Schema Admins non vide (1 compte)
+### Schema Admins not empty (1 account)
 
-Le groupe **Schema Admins** contient 1 compte au lieu d'être vide : le compte "**Administrateur**"
+The **Schema Admins** group contains 1 account instead of being empty: the "**Administrateur**" account.
 
 ```powershell
 Remove-ADGroupMember "Administrateurs du schéma" -Members "Administrateur"
 ```
 
-Ce groupe a des privilèges sur le schéma AD (irréversible). Il doit être vide en production, mais dans notre cas je choisis de le laisser pour éviter de ne plus pouvoir être connecté sur l'AD en Admin justement.
+This group can modify the AD schema, and schema changes are irreversible. It should be empty in production; in this lab, I chose not to run the command above, to avoid any risk of locking myself out of the Admin account.
 
-### Corbeille non activée :
+### Recycle Bin not enabled:
 
 ```powershell
 # Active la corbeille AD
 Enable-ADOptionalFeature -Identity 'Recycle Bin Feature' -Scope ForestOrConfigurationSet -Target 'mesmots.local'
 ```
 
-Cela permet de **récupérer n'importe quel objet supprimé** pendant 180 jours au lieu de le perdre définitivement.
+This makes it possible to **recover any deleted object** for 180 days instead of losing it permanently.
 
-Priv Accounts sur le rapport tombe désormais à 0 :
+Privileged Accounts in the report now drops to 0:
 
 <figure><img src="../../../.gitbook/assets/image (125).png" alt=""><figcaption></figcaption></figure>
 
-### Absence de backup :
+### No backup:
 
 <figure><img src="../../../.gitbook/assets/image (126).png" alt=""><figcaption></figcaption></figure>
 
-Très important, mais pas utile dans notre contexte car lab locale évidemment.
+Critical in production, but out of scope here since this is a local lab.
 
-### Spooler accessible à distance
+### Spooler reachable remotely
 
-Le service **Print Spooler** sur ton DC est accessible via RPC (MS-RPRN), ce qui expose à **PrintNightmare** et autres attaques RCE sur les DC. Aucune raison que les DC impriment donc à désactiver en powershell :
+The **Print Spooler** service on the DC is reachable via RPC (MS-RPRN), which exposes it to **PrintNightmare** and other RCE attacks on DCs. A DC has no reason to print, so we disable the service with PowerShell:
 
 ```powershell
 # Sur ton DC, désactive complètement le spooler distant
@@ -107,29 +107,29 @@ Stop-Service Spooler -Force
 Set-Service Spooler -StartupType Disabled
 ```
 
-### Configuration du LAPS
+### Configuring LAPS
 
-LAPS permet de gérer la rotation des mots de passes admin des machines connectées au domaine : Windows LAPS va **générer un mot de passe robuste et unique pour le compte administrateur local de chaque machine** qu'il gère, tout en effectuant **une rotation automatique de ces mots de passe**. Ensuite, les sésames seront chiffrés et stockés dans l'Active Directory ou l'Azure Active Directory, selon la configuration mise en place.
+LAPS manages the local admin passwords of domain-joined machines: Windows LAPS **generates a strong, unique password for the local administrator account of each machine it manages**, while **automatically rotating these passwords**. The passwords are then encrypted and stored in Active Directory or Entra ID, depending on the configuration.
 
-Sur l'AD, on peut donc utiliser la commande PowerShell suivante, qui va donner les droits d'écriture pour l'OU des machines à stocker l'objet dans les machines :
+On the DC, the following PowerShell command allows computers in the OU to write their own LAPS password attributes:
 
 ```powershell
 Set-LapsADComputerSelfPermission -Identity "OU=Ordinateurs,OU=MesMots,DC=mesmots,DC=local"
 ```
 
-Ensuite avec une GPO > Configuration ordinateur > Stratégies > Modèles d'administration > Système > LAPS :
+Then with a GPO > Computer Configuration > Policies > Administrative Templates > System > LAPS:
 
 <figure><img src="../../../.gitbook/assets/image (127).png" alt=""><figcaption></figcaption></figure>
 
-On garde au moins un mot de passe en historique en cas de lockout :
+We keep at least one password in history in case of a lockout:
 
 <figure><img src="../../../.gitbook/assets/image (128).png" alt=""><figcaption></figcaption></figure>
 
-On se retrouve donc avec ça :
+We end up with this:
 
 <figure><img src="../../../.gitbook/assets/image (129).png" alt=""><figcaption></figcaption></figure>
 
-On passe ensuite à la conf sur le PC client, successivement :
+We then move on to the configuration on the client PC, running in order:
 
 ```powershell
 gpupdate /force
@@ -138,13 +138,13 @@ gpupdate /force
 Restart-Computer
 ```
 
-On rouvre une session sur le PC client, puis on remarque que sur le journal d'événements de l'AD :
+After logging back in on the client PC, we check its event log:
 
-**Journaux des applications et des services > Microsoft > Windows > LAPS > Operational**
+**Applications and Services Logs > Microsoft > Windows > LAPS > Operational**
 
 <figure><img src="../../../.gitbook/assets/image (130).png" alt=""><figcaption></figcaption></figure>
 
-Le LAPS s'est bien appliqué. On récupère ensuite le mot de passe assigné pour le PC en question via la commande PowerShell :
+LAPS was applied successfully. We then retrieve the password assigned to that PC with the following PowerShell command:
 
 ```powershell
 PS C:\Users\Administrateur> Get-LapsADPassword "WIN11-HOME-LAB" -AsPlainText
@@ -160,54 +160,54 @@ DecryptionStatus    : Success
 AuthorizedDecryptor : MESMOTS0\Admins du domaine
 ```
 
-On peut désormais lancer un programme en tant qu'admin sur le PC client en spécifiant bien dans l'UAC qui s'affiche :
+We can now run a program as admin on the client PC, entering in the UAC prompt:
 
-* "**.\Administrateur**" comme username (j'oubliais le **.\\** pour spécifier que c'est un compte local au début ce qui fait que j'ai été bloqué pendant presque 1 heure 😄)
-* Et le mot de passe généré par LAPS :
+* "**.\Administrateur**" as the username (I forgot the **.\\** that indicates a local account at first, which got me stuck for almost an hour 😄)
+* And the password generated by LAPS:
 
 <figure><img src="../../../.gitbook/assets/image (131).png" alt=""><figcaption></figcaption></figure>
 
-On a maintenant un shell "**System32**" sur le PC ce qui veut dire que le compte admin passe bien !
+We get an elevated shell in "**System32**", so the LAPS-managed admin account works :
 
 <figure><img src="../../../.gitbook/assets/image (132).png" alt=""><figcaption></figcaption></figure>
 
-Et le score PingCastle baisse à nouveau :
+And the PingCastle score drops again !
 
 <figure><img src="../../../.gitbook/assets/image (133).png" alt=""><figcaption></figcaption></figure>
 
-### Bloquer internet pour les moteur de scripts malveillants
+### Blocking Internet access for malicious script engines
 
-Les moteurs de scripts malveillants (certains sont des LOLbins) suivants :
+The following script engines (some of them LOLBins):
 
 **wscript.exe, cscript.exe, mshta.exe, conhost.exe, runScriptHelper.exe**
 
-peuvent se connecter directement à Internet pour exfiltrer des données ou télécharger des charges. Par défaut, le pare-feu Windows ne les bloque pas en sortie.
+can connect directly to the Internet to exfiltrate data or download payloads. By default, the Windows firewall does not block them outbound.
 
-**Solution via GPO** :
+**Solution via GPO**:
 
-* Édite une GPO liée aux DCs et postes (`Ordinateur > Configuration > Paramètres Windows > Pare-feu Windows avec sécurité avancée`) que j'ai appelé "**Sécurité - Bloquer moteur de scripts /= internet**" :
+* I choose to edit a GPO linked to the DCs and workstations (`Computer > Configuration > Windows Settings > Windows Firewall with Advanced Security`), which I named "**Sécurité - Bloquer moteur de scripts /= internet**":
 
 <figure><img src="../../../.gitbook/assets/image (134).png" alt=""><figcaption></figcaption></figure>
 
 ```
-Programme : %SystemRoot%\System32\wscript.exe (et les autres)
+Programme : %SystemRoot%\System32\wscript.exe (and others)
 ```
 
-Action :
+Action:
 
-* Bloquer la connexion
+* Block the connection
 
-On se retrouve donc avec les programmes suivants bloqués :
+We end up with the following programs blocked:
 
 <figure><img src="../../../.gitbook/assets/image (135).png" alt=""><figcaption></figcaption></figure>
 
-### Sous réseau DC
+### DC subnet
 
-Bien que l'AD a une IP fixe, je choisis quand même de créer un sous réseau dédié pour que l'AD puisse optimiser les connexions clientes :
+Even though the DC has a static IP, I declared its subnet in Sites and Services so that clients are mapped to the right site:
 
 <figure><img src="../../../.gitbook/assets/image (136).png" alt=""><figcaption></figcaption></figure>
 
-Le site affiché et ensuite correct :
+The displayed site is then correct:
 
 ```powershell
 PS C:\Users\Administrateur> nltest /dsgetsite
@@ -215,16 +215,16 @@ Default-First-Site-Name
 La commande a été correctement exécutée
 ```
 
-Avec ces deux règles Stale Objects est passé de 31 à **11/100** (S-OldNtlm corrigé via ta GPO "**Sécurité - Désactiver NTLM**") :
+With these two rules, Stale Objects went from 31 to **11/100** (S-OldNtlm fixed via the "**Sécurité - Désactiver NTLM**" GPO):
 
 <figure><img src="../../../.gitbook/assets/image (137).png" alt=""><figcaption></figcaption></figure>
 
-PingCastle continue à flagger ça :
+PingCastle still flags this anyway:
 
 <figure><img src="../../../.gitbook/assets/image (138).png" alt=""><figcaption></figcaption></figure>
 
-Mais normal car **Runscripthelper.exe** était présent uniquement sur **Windows 10 build 16299**. L'AD tourne sur **Windows Server 2019**, où ce binaire n'existe tout simplement plus — Microsoft l'a retiré dans les versions suivantes.
+But that is expected, because **Runscripthelper.exe** only existed on **Windows 10 build 16299**. The AD runs on **Windows Server 2019**, where this binary simply no longer exists: Microsoft removed it in later versions.
 
-Il reste encore beaucoup à faire pour arriver à un score à 0 (moins probable en production). Ce qui fait que le score reste très élevé est dû au fait que l'AD ne dispose pas d'un backup, ce qui est normale car l'AD est en locale sur mon PC.
+There is still work to do to reach a score of 0 (rarely achieved in production anyway). The main thing keeping the score high is the missing backup, which is expected for an AD running locally on my PC.
 
-Tout les autres points sont des **"informative rules" (0 point)** - typiques labo solo.
+All the other points are **"informative rules" (0 points)**, typical of a solo lab.

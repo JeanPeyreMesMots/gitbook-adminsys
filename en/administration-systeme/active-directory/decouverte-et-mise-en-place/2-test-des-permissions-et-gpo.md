@@ -1,83 +1,165 @@
-# 2 - Test des permissions et GPO
+# 2 - Permissions testing and GPOs
 
-Comme spécifié dans la nomenclature, l'un des membres du groupes "**GG\_GRP\_ADMIN**" doit pouvoir accéder au dossier "**Administratif**" et aux sous dossiers en lecture et écriture sans soucis dessus. On va donc ouvrir une session avec un utilisateur faisant partie du groupe mentionné, en l'occurrence "**claurent**", suivi d'un mot de passe que l'utilisateur devra changer :
+As specified in the naming scheme, any member of the "**GG\_GRP\_ADMIN**" group must be able to access the "**Administratif**" folder and its subfolders with read and write permissions without any issue. So we open a session with a user who belongs to that group, in this case "**claurent**", followed by the password that the user will have to change:
 
 <figure><img src="../../../.gitbook/assets/image (99).png" alt=""><figcaption></figcaption></figure>
 
-On va donc monter le partage avec la commande "**net use**" sur la lettre **X:**, car Windows s'authentifie directement avec la session en cours :
+We then mount the share with the "**net use**" command on drive letter **X:**, thanks to Windows authenticating with the current session name:
 
 ```powershell
  net use X: \\mesmots.local\ADMINISTRATIF
 ```
 
-Le partage apparait alors ENENENENENEN :
+The share then appears:
 
 <figure><img src="../../../.gitbook/assets/image (85).png" alt=""><figcaption></figcaption></figure>
 
-Et on peut donc écrire dessus, avec les bons droits comme demandés. Par exemple ici, dans le dossier "**ADMINISTRATIF/RH**" du partage :
+And we can write to it, with the right permissions as requested. For example here, in the "**ADMINISTRATIF/RH**" folder of the share:
 
 <figure><img src="../../../.gitbook/assets/image (86).png" alt=""><figcaption></figcaption></figure>
 
-À l'inverse quand on essaye d'accéder à un autre dossier interdit, comme "**DIRECTION**", on ne peut pas :
+At contrary, when we try to access another forbidden folder such as "**DIRECTION**", we can't:
 
 <figure><img src="../../../.gitbook/assets/image (87).png" alt=""><figcaption></figcaption></figure>
 
-C'est là où on voit que les permissions NTFS vont bien leurs effets ! Cependant, un utilisateur va trouver rébarbatif à chaque fois d'ouvrir l'explorateur de fichiers pour se connecter sur le partage. Et pas question de passer par une commande CMD ou PowerShell.
+This is where we can see that the NTFS permissions are doing their job! However, a user will find it tedious to open File Explorer every time to connect to the share, and using a CMD or PowerShell command is out of the question.
 
-On va donc passer par la création d'une GPO pour permettre d'avoir le lecteur qui soit monté directement à l'ouverture de la session.
+We then must create a GPO so that the drive is mounted directly when the session opens.
 
-### Création de la GPO
+### Creating the GPO
 
-On créé donc une GPO "**U - Connecter - Lecteur - Réseau**" où le lecteur réseau sera mappé en tant que "**X:**" comme demandé sur le TP. Je ne savais pas faire ça avant, heureusement l'excellent blog [It-Connect](https://www.it-connect.fr/) en a publié la procédure au moment où j'écris ces lignes :
+We create a GPO named "**U - Connecter - Lecteur - Réseau**" where the network drive will be mapped as "**X:**", as requested in the lab. I didn't know how to do this beforehand, fortunately the excellent blog [IT-Connect](https://www.it-connect.fr/) (in French) published the procedure at the time of writing:
 
 {% embed url="https://www.it-connect.fr/windows-comment-ajouter-des-emplacements-reseau-par-gpo/" %}
 
-En suivant le tuto j'ai donc ma GPO qui se présente comme ceci :
+Following the tutorial, my GPO looks like this:
 
 <figure><img src="../../../.gitbook/assets/image (107).png" alt=""><figcaption></figcaption></figure>
 
-Pour comprendre, le premier partage "**P:**" correspond au profil perso, voulu dans le cahier des charges. Il s'agit en fait du dossier personnel par utilisateur qui prend la variable de l'utilisateur en propriété. (ex: **X:\PROFIL\_PERSO\Jean.MARTIN**). Il est configuré comme suit :
+To explain: the first share, "**P:**", corresponds to the personal profile required in the specifications. It is a personal folder per user, which uses the user variable as its path (e.g. **X:\PROFIL\_PERSO\Jean.MARTIN**). It is configured as follows:
 
 <figure><img src="../../../.gitbook/assets/image (108).png" alt=""><figcaption></figcaption></figure>
 
-De façon analogue, pour le dossier de Partages, qui lui prendra la lettre "**X:**" :
+Similarly, for the Shares folder, which takes the letter "**X:**":
 
 <figure><img src="../../../.gitbook/assets/image (109).png" alt=""><figcaption></figcaption></figure>
 
-On y inclus ensuite tout les membres des groupes, avec les utilisateurs authentifiés :
+We then include all the members of the groups, along with authenticated users:
 
 <figure><img src="../../../.gitbook/assets/image (110).png" alt=""><figcaption></figcaption></figure>
 
-Pour valider le bon fonctionnement de la GPO, on se connecte sur un poste Windows avec un compte ciblé par la GPO (appartenant au bon groupe de sécurité si le ciblage a été configuré). En l'occurence, on peut toujours rester sur "**claurent**".
+To validate that the GPO works, we log in on a Windows workstation with an account targeted by the GPO (belonging to the right security group if targeting has been configured). Here, we can keep using "**claurent**".
 
-On exécute un `gpupdate /force` pour forcer l'actualisation des stratégies et récupérer la configuration depuis le contrôleur de domaine.
+We run `gpupdate /force` to force a policy refresh and fetch the configuration from the domain controller.
 
-Dans l'Explorateur de fichiers, sous **Ce PC** > **Emplacements réseau**, le raccourci nommé "**Partage**" apparaît bien, tout comme notre "**PROFIL\_PERSO**", confirmant que la GPO est appliquée correctement :
+In File Explorer, under **This PC** > **Network locations**, the shortcut named "**Partage**" does appear, so does our "**PROFIL\_PERSO**", confirming that the GPO is applied correctly:
 
 <figure><img src="../../../.gitbook/assets/image (111).png" alt=""><figcaption></figcaption></figure>
 
-### Définition d'un quota sur le partage :
+### Setting a quota on the share:
 
-Pour éviter que le partage arrive à saturation, il est bon ton de définir un quota à ne pas dépasser pour les utilisateurs. Il est possible sur Windows Server de mettre une limite sur le dossier
+To prevent the share from becoming full, it is good practice to define a quota that users must not exceed. On Windows Server, it is possible to set a limit on a folder.
 
-On commence par installer le rôle FSRM :
+We start by installing the FSRM role:
 
 <figure><img src="../../../.gitbook/assets/image (112).png" alt=""><figcaption></figcaption></figure>
 
-On choisit une limite de 100 Mo pour le partage que j'applique sur les profils persos. Même si c'est pas assez (car le partage fait 10Go/24users, donc peu ^^), ça permet de voir ce que ça donne et d'adopter une approche vraie de ce que l'on trouve en entreprise.
+We choose a limit of 100 MB for the share, which I apply to the personal profiles. Even if it's not enough (the share is 10 GB for 24 users, not so much ^^), it lets us see how it behaves and adopt an approach close to what you find in a company.
 
 <figure><img src="../../../.gitbook/assets/image (113).png" alt=""><figcaption></figcaption></figure>
 
-Résultat lorsqu'on est connecté sur une session, la limite change pour passer à 100Mo :
+Result: when logged in to a session, the limit changes to 100 MB:
 
 <figure><img src="../../../.gitbook/assets/image (111).png" alt=""><figcaption></figcaption></figure>
 
-Mettre un fichier de + de 100Mo dans son partage est donc impossible :
+Putting a file larger than 100 MB in your share is therefore impossible:
 
 <figure><img src="../../../.gitbook/assets/image (115).png" alt=""><figcaption></figcaption></figure>
 
-Pour finir, on active le bureau à distance :
+Finally, we enable Remote Desktop:
 
 <figure><img src="../../../.gitbook/assets/image (116).png" alt=""><figcaption></figcaption></figure>
 
-Avec le port 3389 par défaut à changer quand même.
+The default port 3389 still # 2 - Permissions testing and GPOs
+
+As specified in the naming scheme, any member of the "**GG\_GRP\_ADMIN**" group must be able to access the "**Administratif**" folder and its subfolders with read and write permissions without any issue. So we open a session with a user who belongs to that group, in this case "**claurent**", followed by a password that the user will have to change:
+
+<figure><img src="../../../.gitbook/assets/image (99).png" alt=""><figcaption></figcaption></figure>
+
+We then mount the share with the "**net use**" command on drive letter **X:**, since Windows authenticates directly with the current session:
+
+```powershell
+ net use X: \\mesmots.local\ADMINISTRATIF
+```
+
+The share then appears:
+
+<figure><img src="../../../.gitbook/assets/image (85).png" alt=""><figcaption></figcaption></figure>
+
+And we can write to it, with the right permissions as requested. For example here, in the "**ADMINISTRATIF/RH**" folder of the share:
+
+<figure><img src="../../../.gitbook/assets/image (86).png" alt=""><figcaption></figcaption></figure>
+
+Conversely, when we try to access another forbidden folder such as "**DIRECTION**", we can't:
+
+<figure><img src="../../../.gitbook/assets/image (87).png" alt=""><figcaption></figcaption></figure>
+
+This is where we can see that the NTFS permissions are doing their job! However, a user will find it tedious to open File Explorer every time to connect to the share, and using a CMD or PowerShell command is out of the question.
+
+So we will create a GPO so that the drive is mounted directly when the session opens.
+
+### Creating the GPO
+
+We create a GPO named "**U - Connecter - Lecteur - Réseau**" where the network drive will be mapped as "**X:**", as requested in the lab. I didn't know how to do this beforehand, fortunately the excellent blog [IT-Connect](https://www.it-connect.fr/) (in French) published the procedure at the time of writing:
+
+{% embed url="https://www.it-connect.fr/windows-comment-ajouter-des-emplacements-reseau-par-gpo/" %}
+
+Following the tutorial, my GPO looks like this:
+
+<figure><img src="../../../.gitbook/assets/image (107).png" alt=""><figcaption></figcaption></figure>
+
+To explain: the first share, "**P:**", corresponds to the personal profile required in the specifications. It is a personal folder per user, which uses the user variable as its path (e.g. **X:\PROFIL\_PERSO\Jean.MARTIN**). It is configured as follows:
+
+<figure><img src="../../../.gitbook/assets/image (108).png" alt=""><figcaption></figcaption></figure>
+
+Similarly, for the Shares folder, which takes the letter "**X:**":
+
+<figure><img src="../../../.gitbook/assets/image (109).png" alt=""><figcaption></figcaption></figure>
+
+We then include all the members of the groups, along with authenticated users:
+
+<figure><img src="../../../.gitbook/assets/image (110).png" alt=""><figcaption></figcaption></figure>
+
+To validate that the GPO works, we log in on a Windows workstation with an account targeted by the GPO (belonging to the right security group if targeting has been configured). Here, we can keep using "**claurent**".
+
+We run `gpupdate /force` to force a policy refresh and fetch the configuration from the domain controller.
+
+In File Explorer, under **This PC** > **Network locations**, the shortcut named "**Partage**" does appear, as does our "**PROFIL\_PERSO**", confirming that the GPO is applied correctly:
+
+<figure><img src="../../../.gitbook/assets/image (111).png" alt=""><figcaption></figcaption></figure>
+
+### Setting a quota on the share:
+
+To prevent the share from becoming full, it is good practice to define a quota that users must not exceed. On Windows Server, it is possible to set a limit on a folder.
+
+We start by installing the FSRM role:
+
+<figure><img src="../../../.gitbook/assets/image (112).png" alt=""><figcaption></figcaption></figure>
+
+We choose a limit of 100 MB for the share, which I apply to the personal profiles. Even if it's not enough (the share is 10 GB for 24 users, so not much ^^), it lets us see how it behaves and adopt an approach close to what you find in a company.
+
+<figure><img src="../../../.gitbook/assets/image (113).png" alt=""><figcaption></figcaption></figure>
+
+Result: when logged in to a session, the limit changes to 100 MB:
+
+<figure><img src="../../../.gitbook/assets/image (111).png" alt=""><figcaption></figcaption></figure>
+
+Putting a file larger than 100 MB in your share is therefore impossible:
+
+<figure><img src="../../../.gitbook/assets/image (115).png" alt=""><figcaption></figcaption></figure>
+
+Finally, we enable Remote Desktop:
+
+<figure><img src="../../../.gitbook/assets/image (116).png" alt=""><figcaption></figcaption></figure>
+
+The default port 3389 should be changed, though.

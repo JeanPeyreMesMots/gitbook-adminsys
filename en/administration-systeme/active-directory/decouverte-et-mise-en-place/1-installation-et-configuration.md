@@ -233,11 +233,11 @@ GG_GRP_IT              Modify                       False
 GG_GRP_PROFS           Modify                 
 ```
 
-Each group therefore exactly the permissions it needs to access each folder, as defined in the permissions table before.
+Each group has exactly the permissions it needs to access its folder, as defined in the permissions table before.
 
 ### Configuring the Windows 11 client VM and the network
 
-Now that the server and the share are in place, we can create a Windows 11 VM on the same local network to simulate a client workstation.
+Now that both server and share are set up, we can create a Windows 11 VM on the same local network to simulate a client workstation.
 
 _Note: to be able to join the AD domain, it is essential to choose the "Pro" edition._
 
@@ -261,17 +261,17 @@ We then notice that 2 users have been created in the group:
 
 <figure><img src="../../../.gitbook/assets/image (88).png" alt=""><figcaption></figcaption></figure>
 
-We then create a DHCP pool. In this example, the AD server has the IP address "**192.168.1.100**", also configured statically on it. We will create a scope that distributes IP addresses from **192.168.1.100** to **124**, i.e. 24 IPv4 addresses, which is the number of employees of the fictional company!
+We then create a DHCP pool. In this example, the AD server get the IP "**192.168.1.100**", also configured statically on it. We will create a scope that distributes IP addresses from **192.168.1.100** to **124**, i.e. 24 IPv4 addresses, which is the number of employees of the fictional company ;)
 
 We give it a name, here "**LAN\_MesMots**":
 
 <figure><img src="../../../.gitbook/assets/image (90).png" alt=""><figcaption></figcaption></figure>
 
-We then set the DHCP lease to 8 days, which is realistic for a corporate network:
+Then set the DHCP lease to 8 days, which is realistic for a corporate network:
 
 <figure><img src="../../../.gitbook/assets/image (92).png" alt=""><figcaption></figcaption></figure>
 
-We can confirm the operation worked by looking at the logs on the server: "**C:\Windows\System32\dhcp**"
+An we can confirm the operation worked by looking at the logs on the server: "**C:\Windows\System32\dhcp**"
 
 ```powershell
 55,04/26/26,16:53:39,Autorisé (en service),,mesmots.local,,,0,6,,,,,,,,,0

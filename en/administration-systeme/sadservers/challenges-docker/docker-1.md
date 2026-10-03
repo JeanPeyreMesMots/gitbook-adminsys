@@ -1,71 +1,71 @@
 # 1 - Salta, Venice, Tarifa, Helsingør, Bharuch, Quito & Atlantis
 
-Challenges de troubleshooting Docker sur [SadServers](https://sadservers.com/scenarios/topic/docker).
+Docker troubleshooting challenges from [SadServers](https://sadservers.com/scenarios/topic/docker).
 
 ### <mark style="color:$warning;">Salta</mark>
 
-Premier réflexe : lister les images et conteneurs existants :
+First reflex: list the existing images and containers:
 
 ```bash
 sudo docker images
 sudo docker ps -a
 ```
 
-On consulte aussi les logs du conteneur concerné :
+We also check the logs of the container involved:
 
 ```bash
 docker logs container_name
 ```
 
-La cause : une coquille dans le `Dockerfile`, ligne `CMD` — `serve.js` au lieu de `server.js`. Correction et rebuild depuis `/home/admin/app` :
+The cause: a typo in the `Dockerfile`, on the `CMD` line: `serve.js` instead of `server.js`. We fix it and rebuild from `/home/admin/app`:
 
 ```bash
 docker build -t app .
 ```
 
-(image locale `node:15.7-alpine` fournie, pas d'accès Internet pour en tirer d'autres). Alternative sans rebuild :
+(the `node:15.7-alpine` image is provided locally, with no Internet access to pull others). Alternative without rebuilding, by overriding the command:
 
 ```bash
 docker run -d app node server.js
 ```
 
-En voulant vérifier le port exposé attendu par le conteneur, j'ai remarqué que le serveur nginx tournait déjà sur le même port sur l'hôte, il faut l'arrêter avant de relancer le conteneur.
+While checking which port the container was expected to expose, I noticed that an nginx server was already running on the same port on the host. It has to be stopped before starting the container again.
 
-Dernier ajustement : dans le `Dockerfile`, la ligne `EXPOSE` déclarait le port `8880` au lieu de `8888`. On corrige puis on rebuild, puis :
+Last fix: in the `Dockerfile`, the `EXPOSE` line declared port `8880` instead of `8888`. We fix it, rebuild, then:
 
 ```bash
 docker run -d -p 8888:8888 app
 ```
 
-Ou, sans toucher à l'image : `docker run -d -p 8888:8888 app node server.js`.
+Or, without touching the image: `docker run -d -p 8888:8888 app node server.js`.
 
-Ici le port 8888 du serveur est mappé vers le port 8888 du conteneur, donc accessible depuis l'extérieur via `http://notre-ip:8888`. Classique pour les serveurs web (Jupyter, Node.js, etc.).
+Here, port 8888 on the host is mapped to port 8888 in the container, so the app is reachable from outside at `http://our-ip:8888`, and locally with "**curl localhost:8888**", which returns the expected response and solves the challenge. A classic setup for web servers (Jupyter, Node.js, etc.).
 
 ```bash
 docker run -d -p :8888 app
 ```
 
-Ici, aucun port hôte n'est mappé. Le conteneur écoute sur son port 8888 en interne uniquement, ce qui nous permet alors de taper dessus, et de récupérer le flag en faisait un "**curl localhost:8888**".
+For comparison, with this syntax no host port is specified: Docker publishes the container's port 8888 on a random host port (which `docker port <container>` shows).
 
 ### <mark style="color:$warning;">Venice</mark>
 
-Pas de panne à corriger ici, plutôt un exercice d'identification : déterminer si l'environnement tourne dans un vrai conteneur Docker ou autre chose.
+No outage to fix here, rather an identification exercise: determine whether the environment runs in a real Docker container or something else.
 
-Une ressource utile pour ce chall sur le sujet micro-VM vs conteneur : [some-natalie.dev](https://some-natalie.dev/blog/microvm-or-container/). Elle indique une méthode pour vérifier ce type de détail : inspecter l'environnement du process PID 1 à la recherche d'une variable `container` :
+A useful resource on micro-VMs vs containers for this challenge: [some-natalie.dev](https://some-natalie.dev/blog/microvm-or-container/). It describes a way to check this: inspect the environment of PID 1, looking for a `container` variable:
 
 ```bash
 cat /proc/1/environ | tr "\0" "\n" | grep container
 ```
 
-Normalement `container=podman` dans ce cas précis (la valeur avait été modifiée dans le challenge pour corser l'exercice).
+In this case it should be `container=podman` (the value had been altered in the challenge to make it harder).
 
-Autre indicateur possible : l'absence de kernel threads (`[kthreadd]` par exemple) dans la liste des process, signe qu'on n'est pas dans un environnement avec son propre noyau complet.
+Another possible clue: the absence of kernel threads (such as `[kthreadd]`) in the process list, a sign that the environment doesn't have its own kernel, unlike a VM or micro-VM.
 
 ### <mark style="color:$warning;">Tarifa</mark>
 
-Un challenge dont je n'ai pas eu le temps de finir de noter la soluce malheureusement.
+A challenge whose solution I unfortunately didn't have time to write up completely.
 
-1er coup d'oeil dans les logs comme toujours :
+First look at the logs, as always:
 
 ```bash
 docker logs nginx_1
@@ -76,13 +76,13 @@ docker logs nginx_1
 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
 ```
 
-Le script d'entrypoint nginx tente de modifier un fichier de configuration mais le système de fichiers est monté en lecture seule à cet endroit. Il s'agit d'un volume Docker monté en `:ro` (read-only) là où l'image nginx attend de pouvoir écrire.
+The nginx entrypoint script tries to modify a configuration file, but the file system is read-only at that location: a Docker volume mounted as `:ro` (read-only) where the nginx image expects to be able to write.
 
-\[à compléter plus tard]
+\[to be completed later]
 
 ### <mark style="color:$warning;">Helsingør</mark>
 
-**Contexte :** ce chall expose une réplication PostgreSQL primaire/replica via Docker Compose, où le replica refuse de démarrer.
+**Context:** this challenge sets up PostgreSQL primary/replica replication with Docker Compose, and the replica refuses to start.
 
 ```bash
 docker compose ps
@@ -93,7 +93,7 @@ postgres-db-master    Up 2 minutes (healthy)
 postgres-db-replica   Restarting (1) 35 seconds ago
 ```
 
-Le replica boucle en restart. Hop dans les logs :
+The replica is stuck in a restart loop. Let's check the logs:
 
 ```bash
 docker compose logs postgres-db-replica
@@ -104,38 +104,38 @@ FATAL: recovery aborted because of insufficient parameter settings
 DETAIL: max_connections = 80 is a lower setting than on the primary server, where its value was 100.
 ```
 
-PostgreSQL refuse le démarrage du replica car le nombre de connexions sont inférieurs à celle du Postgres replica. Une recherche Google qui confirme la piste (fichier `postgresql.conf`) pour savoir où corriger le soucis :
+PostgreSQL refuses to start the replica because its `max_connections` is lower than on the primary. A quick search confirms where to fix it (the `postgresql.conf` file):
 
 ```bash
 grep "max_co*" postgres.conf
 # max_connections = 100  # (change requires restart)
 ```
 
-On ajuste la valeur de max connections comme indiqué, on reup les conteneurs :
+We adjust `max_connections` as indicated and bring the containers back up:
 
 ```bash
 docker compose down
 docker compose up -d
 ```
 
-Toujours en échec, mais avec une **erreur différente** cette fois :
+Still failing, but with a **different error** this time:
 
 ```
 DETAIL: max_worker_processes = 4 is a lower setting than on the primary server, where its value was 8.
 ```
 
-Pas de quoi se décourager. Après plusieurs cycles de `down`/`up`, trois paramètres gérant les connexions devaient être égales ou au-dessus des valeurs du premier :
+No reason to give up. After several `down`/`up` cycles, it turned out that several parameters had to be equal to or higher than the primary's values:
 
 * `max_connections` → 100
-* `max_worker_processes` → 10 (le primaire était à 8)
-* `max_wal_senders` → 10 (le primaire était à 10)
-* `max_locks_per_transaction` → 64 (le primaire était à 64)
+* `max_worker_processes` → 10 (the primary was at 8)
+* `max_wal_senders` → 10 (the primary was at 10)
+* `max_locks_per_transaction` → 64 (the primary was at 64)
 
-Puis le compose a pu relancer le service correctement sans autre erreur. Ce qui résout le challenge.
+Compose was then able to start the service without any other error, which solved the challenge.
 
 ### <mark style="color:$warning;">Bharuch</mark>
 
-On a affaire ici à un conteneur qui boucle en erreur immédiatement au lancement :
+Here we have a container that fails immediately on startup, in a loop:
 
 ```bash
 docker logs web-server
@@ -143,20 +143,20 @@ docker logs web-server
 # (répété en boucle)
 ```
 
-On cherchant le code applicatif on tombe sur un `app.py` :
+Looking for the application code, we find an `app.py`:
 
 ```bash
 sudo find / -name app.py
 ```
 
-Trouvé, mais accès refusé sans sudo, puis erreur différente une fois en sudo :
+Found, but access is denied without sudo, and we get a different error with sudo:
 
 ```bash
 sudo python3 /var/lib/docker/overlay2/.../app/app.py
 # ModuleNotFoundError: No module named 'flask'
 ```
 
-Une recherche Google indique que `exec /bin/sh: exec format error` correspond à un problème d'architecture. En inspectant l'image avec un grep :
+A quick search shows that `exec /bin/sh: exec format error` points to an architecture mismatch. Inspecting the image with a grep:
 
 ```bash
 docker inspect web-server:latest | grep -i "archi"
@@ -165,19 +165,19 @@ uname -a
 # ... x86_64 GNU/Linux
 ```
 
-L'image a été buildée pour ARM64, alors que l'hôte tourne en x86\_64 : le binaire ne peut tout simplement pas s'exécuter nativement.
+The image was built for ARM64, while the host runs x86\_64: the binaries simply can't run natively.
 
-Plutôt que de reconstruire l'image pour la bonne architecture (plus long), on passe par QEMU pour permettre l'exécution multi-architecture sur l'hôte :
+Rather than rebuilding the image for the right architecture (which takes longer), we register QEMU emulation on the host to allow multi-architecture execution:
 
 ```bash
 docker run --rm -d --privileged multiarch/qemu-user-static --reset -p yes
 ```
 
-Ce qui résout le challenge.
+Once the container is restarted, it runs under emulation, which solves the challenge.
 
 ### <mark style="color:$warning;">Quito</mark>
 
-**Objectif :** démarrer le conteneur `nginx` depuis le conteneur `docker-access`.
+**Goal:** start the `nginx` container from inside the `docker-access` container.
 
 ```bash
 docker ps -a
@@ -188,14 +188,14 @@ nginx           Exited (137) 10 months ago
 docker-access    Exited (137) 14 seconds ago
 ```
 
-On démarre le conteneur "**docker-access**" puis on rentre dedans :
+We start the "**docker-access**" container and get a shell inside it:
 
 ```bash
 docker start docker-access
 docker exec -ti docker-access sh
 ```
 
-Cependant ça nous dit qu'on a pas d'accès au démon Docker depuis l'intérieur :
+However, it can't reach the Docker daemon from inside:
 
 ```bash
 docker ps
@@ -203,25 +203,25 @@ docker ps
 Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
 ```
 
-Le conteneur n'a par défaut aucun accès au Docker de l'hôte. Il faut pour cela que :
+By default, a container has no access to the host's Docker. For that:
 
-* le démon Docker tourne sur l'hôte
-* le socket `/var/run/docker.sock` de l'hôte doit être monté dans le conteneur, avec les bonnes permissions.
+* the Docker daemon must be running on the host;
+* the host's `/var/run/docker.sock` socket must be mounted into the container, with the right permissions.
 
-On check donc côté hôte que le démon tourne bien :
+So we check on the host that the daemon is running:
 
 ```bash
 systemctl status docker
 # Active: active (running)
 ```
 
-Puis on lance le conteneur avec le socket monté :
+Then we run the container with the socket mounted:
 
 ```bash
 docker run -it -v /var/run/docker.sock:/var/run/docker.sock --name docker-access docker-access
 ```
 
-Résolu : le conteneur `docker-access` peut désormais piloter Docker sur l'hôte via le socket monté.
+Solved: the `docker-access` container can now control the host's Docker through the mounted socket.
 
 ```bash
 docker images
@@ -232,9 +232,9 @@ docker ps
 # nginx bien Up
 ```
 
-#### Point de vigilance sur le run en root
+#### A word of caution about running as root
 
-Le conteneur avait été lancé en root pour que ça fonctionne, ce qui n'est pas idéal côté sécurité (accès complet au démon Docker de l'hôte depuis un conteneur root équivaut quasiment à un accès root sur l'hôte lui-même). La meilleure approche à privilégier la prochaine fois plutôt que `--user root` :
+The container was run as root to make this work, which isn't ideal security-wise. An alternative to `--user root` is to add the host's `docker` group GID to the container:
 
 ```bash
 docker run -it --rm \
@@ -244,11 +244,11 @@ docker run -it --rm \
   ton_image
 ```
 
-Cette approche ajoute le GID du groupe `docker` de l'hôte au conteneur, permettant d'utiliser le socket sans donner un accès root complet.
+This lets a non-root user inside the container use the socket. However, keep in mind that any access to the Docker socket, root or not, is practically equivalent to root access on the host: whoever can talk to the daemon can start a privileged container. Mounting the socket should therefore be reserved for trusted containers.
 
 ### <mark style="color:$warning;">Atlantis</mark>
 
-**Objectif :** builder et lancer un conteneur "app" à partir d'un Dockerfile multi-stage :
+**Goal:** build and run an "app" container from a multi-stage Dockerfile:
 
 ```dockerfile
 # STAGE 1
@@ -264,7 +264,7 @@ COPY --from=builder /src/hello /usr/local/bin/hello
 CMD ["/usr/local/bin/hello"]
 ```
 
-Le build réussit, mais le run échoue :
+The build succeeds, but the run fails:
 
 ```bash
 docker build -t app:latest . && docker run app
@@ -272,11 +272,11 @@ docker build -t app:latest . && docker run app
 exec /usr/local/bin/hello: no such file or directory
 ```
 
-Ce message est trompeur : le fichier existe pourtant bel et bien dans l'image (copié depuis le stage builder). En y regardant de plus près, le stage 1 lors de la compilation utilise `debian:13`, basé sur **glibc**, tandis que le stage 2 lors du run utilise `alpine:3.20`, basé sur **musl**.
+This message is misleading: the file does exist in the image (copied from the builder stage). Looking closer, stage 1 compiles on `debian:13`, based on **glibc**, while stage 2 runs on `alpine:3.20`, based on **musl**.
 
-Le binaire compilé et linké dynamiquement contre glibc dans le premier stage ne peut pas s'exécuter dans l'environnement du second. D'où le message d'erreur qui indique un fichier manquant, alors que ça indique un binaire incompatible avec l'env du run.
+The binary, dynamically linked against glibc in the first stage, can't run in the second stage's environment: the "missing file" is actually the glibc dynamic loader, which doesn't exist on Alpine. Hence an error about a missing file, when the real issue is a binary incompatible with the runtime environment.
 
-Il faut pour cela avoir un multistage mutualisé. On va donc modifier les images de façon à ce que dans le run chaque stage utilisent l'image `debian:13-slim` pour éviter les soucis :
+Both stages therefore need to share the same C library. We change the images so that both stages use `debian:13-slim` (another option would be to compile a static binary with `-static`):
 
 ```dockerfile
 # STAGE 1
@@ -292,7 +292,7 @@ COPY --from=builder /src/hello /usr/local/bin/hello
 CMD ["/usr/local/bin/hello"]
 ```
 
-Avec un build et run réussis dans la foulée :
+The build and run then succeed:
 
 ```bash
 docker build -t app . && docker run app

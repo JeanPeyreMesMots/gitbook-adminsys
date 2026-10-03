@@ -2,9 +2,9 @@
 
 ### <mark style="color:$warning;">Auderghem</mark>
 
-**Objectif :** un reverse proxy nginx doit rediriger le trafic vers deux conteneurs `statichtml1` et `statichtml2`.
+**Goal:** an nginx reverse proxy must forward traffic to two containers, `statichtml1` and `statichtml2`.
 
-On inspecte chaque conteneur pour ses IP :
+We inspect each container to get its IP:
 
 ```
 statichtml1 --> 172.172.0.11
@@ -12,17 +12,17 @@ statichtml2 --> 172.172.0.12
 nginx       --> 172.17.0.2
 ```
 
-La conf nginx (`/home/admin/app/default.conf`) référence les hostnames `statichtml1.sadservers.local` et `statichtml2.sadservers.local`. Le ping fonctionne sur les 3 IP directement, mais pas sur les hostnames.
+The nginx configuration (`/home/admin/app/default.conf`) references the hostnames `statichtml1.sadservers.local` and `statichtml2.sadservers.local`. Pinging the 3 IPs directly works, but not the hostnames.
 
-Cependant : `statichtml1`/`statichtml2` sont sur un réseau bridge dédié `static-net`, alors que `nginx` reste sur le réseau `bridge` par défaut.
+The catch: `statichtml1`/`statichtml2` are on a dedicated bridge network, `static-net`, while `nginx` is on the default `bridge` network.
 
-Les logs nginx confirment ça :
+The nginx logs confirm it:
 
 ```
 upstream timed out (110: Connection timed out) while connecting to upstream ... http://172.172.0.11:80/
 ```
 
-On check le réseau `static-net` :
+We check the `static-net` network:
 
 ```bash
 docker network inspect cc3e04c023f1
@@ -30,26 +30,26 @@ docker network inspect cc3e04c023f1
 # statichtml1 -> 172.172.0.11, statichtml2 -> 172.172.0.12
 ```
 
-Depuis l'intérieur du conteneur nginx, le ping par IP fonctionne mais pas par hostname. Logique, puisque nginx n'est même pas dans ce réseau.
+From inside the nginx container, pinging by IP works but not by hostname. That makes sense, since nginx isn't even on that network, and Docker's internal DNS only resolves container names on user-defined networks the container belongs to.
 
-Une solution serait de connecter nginx au réseau `static-net` :
+One solution is to connect nginx to the `static-net` network:
 
 ```bash
 docker network connect static-net nginx
 ```
 
-`docker inspect nginx` montre bien la conf réseau, et le ping par hostname fonctionne depuis l'intérieur du conteneur nginx (après installation de `iputils-ping` toutefois).
+`docker inspect nginx` now shows the network configuration, and pinging by hostname works from inside the nginx container (after installing `iputils-ping`).
 
-Cependant, on tape sur la machine en elle-même :
+However, when we hit the machine itself:
 
 ```bash
 curl http://localhost/1
 # 502 Bad Gateway
 ```
 
-Je redémarre tous les conteneurs par précaution mais sans effet. En observant `docker ps`, les conteneurs `statichtml1`/`statichtml2` écoutent en fait sur le port **3000**, pas 80.
+I restart all the containers just in case, with no effect. Looking at `docker ps`, the `statichtml1`/`statichtml2` containers actually listen on port **3000**, not 80.
 
-Or, dans la conf nginx, le `proxy_pass` ne précisait aucun port :
+And in the nginx configuration, `proxy_pass` didn't specify any port:
 
 ```nginx
 location /1 {
@@ -57,20 +57,20 @@ location /1 {
 }
 ```
 
-Sans port explicite, nginx redirige par défaut vers le port 80 du backend, qui n'écoute pas dessus. On corrige ::
+Without an explicit port, nginx forwards to port 80 on the backend, where nothing is listening. We fix it:
 
 ```nginx
 proxy_pass http://statichtml1.sadservers.local:3000;
 proxy_pass http://statichtml2.sadservers.local:3000;
 ```
 
-On reboot les conteneurs, ce qui résout le chall ensuite.
+After restarting the containers, the challenge is solved.
 
 ### <mark style="color:$warning;">Woluwe</mark>
 
-**Contexte :** un pipeline a généré plusieurs images Docker locales pour une même appli web ; toutes sauf une contiennent une typo introduite par un développeur (`index.htmlz` au lieu de `index.html`). Objectif : retrouver la bonne image, la tagger `prod`, et la déployer sur le port 3000.
+**Context:** a pipeline generated several local Docker images for the same web app; all but one contain a typo introduced by a developer (`index.htmlz` instead of `index.html`). Goal: find the right image, tag it `prod`, and deploy it on port 3000.
 
-Script (avec l'aide de Perplexity) pour scanner l'historique de chaque image à la recherche de la typo :
+A script (written with Perplexity's help) to scan each image's history for the typo:
 
 ```bash
 for img in $(docker images --format '{{.ID}}'); do
@@ -80,21 +80,21 @@ for img in $(docker images --format '{{.ID}}'); do
 done
 ```
 
-Deux résultats. Le premier (`dd15126afe8d`) s'avère être une image générique de base, sans rapport direct avec l'app (probablement présente pour brouiller les pistes du chall) :
+Two results. The first one (`dd15126afe8d`) turns out to be a generic base image, unrelated to the app (probably there as a decoy):
 
 ```bash
 docker history dd15126afe8d --no-trunc
 # CMD busybox httpd ... rien de spécifique à l'app
 ```
 
-Le second (`3f8befa65f01`) est le bon candidat. Son historique de layers montre bien la commande correcte :
+The second one (`3f8befa65f01`) is the right candidate. Its layer history shows the correct command:
 
 ```bash
 docker history 3f8befa65f01 --no-trunc
 # RUN ... echo "HelloWorld;$HW" > index.html
 ```
 
-On tag puis on déploie :
+We tag it and deploy it:
 
 ```bash
 docker tag 3f8befa65f01 prod
@@ -103,11 +103,11 @@ curl http://localhost:3000
 # HelloWorld;529
 ```
 
-Résolu.
+Solved.
 
 ### <mark style="color:$warning;">Torino</mark>
 
-**Objectif :** réduire la taille d'une image Node.js qui pèse environ 1 Go.
+**Goal:** reduce the size of a Node.js image weighing around 1 GB.
 
 ```bash
 docker images
@@ -116,7 +116,7 @@ docker images
 # node         16-alpine 118MB
 ```
 
-Le poids vient directement de l'image de base utilisée dans le Dockerfile :
+The size comes directly from the base image used in the Dockerfile:
 
 ```dockerfile
 FROM node:16
@@ -128,7 +128,7 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 ```
 
-`node:16` (basée sur Debian complet) pèse près d'1 Go, contre \~118 Mo pour `node:16-alpine`. On peut basculer vers l'Alpine, après sauvegarde du Dockerfile d'origine par précaution :
+`node:16` (based on full Debian) weighs almost 1 GB, versus \~118 MB for `node:16-alpine`. We can switch to Alpine, after backing up the original Dockerfile just in case:
 
 ```bash
 cp Dockerfile Dockerfile_OLD
@@ -144,7 +144,7 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 ```
 
-On ajoute un `COPY node_modules .` pour que les dépendances déjà installées soient bien présentes dans l'image, puis on build avec le tag attendu par le challenge :
+We add a `COPY node_modules .` so that the dependencies already installed locally end up in the image (since the challenge environment has no Internet access for `npm install`), then build with the tag expected by the challenge:
 
 ```bash
 docker build -t torino:latest .
@@ -152,7 +152,7 @@ docker images
 # torino latest 120MB
 ```
 
-On passe ainsi de 916 Mo à 120 Mo. Test final :
+We go from 916 MB down to 120 MB. Final test:
 
 ```bash
 nohup node app.js > app.log 2>&1 &
@@ -160,11 +160,11 @@ curl localhost:3000
 # {"message":"Hello from Torino!"}
 ```
 
-Résolu.
+Solved.
 
-#### Bonus : et si on demandait à l'IA ?
+#### Bonus: what if we asked AI?
 
-En demandant à ChatGPT d'optimiser encore plus le Dockerfile et le contenu du dossier en contexte, il nous sort un **build multi-stage** :
+Asking ChatGPT to optimize the Dockerfile even further, with the folder contents as context, it suggests a **multi-stage build**:
 
 ```dockerfile
 # Étape de build : installation des dépendances
@@ -183,34 +183,34 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 ```
 
-Cette version sépare l'installation des dépendances (étape build) du runtime final, en ne copiant que le strict nécessaire (`node_modules` déjà installés + code applicatif) dans l'image finale. Cela évite d'embarquer le cache npm, les fichiers de lock, et les outils de build dans l'image livrée.
+This version separates dependency installation (build stage) from the final runtime, copying only what's strictly needed (installed `node_modules` + application code) into the final image. This avoids shipping the npm cache and build tooling in the delivered image. As always with AI-generated code, it should be reviewed and tested before use.
 
 ### <mark style="color:$warning;">San-Juan</mark>
 
-**Objectif :** un Traefik dockerisé qui route vers plusieurs conteneurs `whoami`, mais ne répond correctement qu'une fois sur trois.
+**Goal:** a dockerized Traefik routes to several `whoami` containers, but only responds correctly some of the time.
 
 ```bash
 curl -s app.sadserver | head -n1
 # tantôt Hostname: xxx, tantôt "Bad Gateway", tantôt rien du tout
 ```
 
-Vérification que tous les conteneurs sont up :
+We check that all the containers are up:
 
 ```bash
 docker ps
 # traefik + 4 conteneurs whoami (app01 à app04), tous "Up"
 ```
 
-Logs des erreurs du conteneur Traefik :
+Errors in the Traefik container's logs:
 
 ```bash
 docker logs a2f3f16b0928 | grep "error"
 # 502 Bad Gateway error="dial tcp 172.19.0.3:81: connect: connection refused"
 ```
 
-Voilà : Traefik essaie de joindre un des conteneurs sur le **port 81**. Ce port n'existe pas côté conteneur `whoami` (qui écoute en 80).
+There it is: Traefik tries to reach one of the containers on **port 81**, which the `whoami` container doesn't listen on (it listens on 80).
 
-Dans le `docker-compose.yml`, le conteneur fautif `app02` déclare explicitement ce mauvais port dans son label Traefik :
+In `docker-compose.yml`, the faulty container, `app02`, explicitly declares that wrong port in its Traefik label:
 
 ```yaml
 app02:
@@ -219,7 +219,7 @@ app02:
     traefik.http.services.app.loadbalancer.server.port: "81"
 ```
 
-On sauvegarde le fichier par précaution, puis on corrige :
+We back up the file just in case, then fix it:
 
 ```bash
 cp docker-compose.yml docker-compose.yml_OLD
@@ -227,10 +227,9 @@ sed -i 's/"81"/"80"/g' docker-compose.yml
 docker compose up -d
 ```
 
-Test après correction : les 4 conteneurs répondent désormais correctement à tour de rôle, sans erreur ni interruption :
+Test after the fix: all 4 containers now answer in turn, with no errors or interruptions:
 
 ```bash
 curl -s app.sadserver | head -n1
 # Hostname: xxx (à chaque fois, load-balancing normal entre les 4 whoami)
 ```
-

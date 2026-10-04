@@ -45,8 +45,8 @@
 
 ## 🧑‍🎓 Courses & Hands-on exercises
 
-* [🔐 Pentesting wp-mobile-detector plugin](cours-and-tp-m1-cyber/pentest-wp-mobile-detector.md)
-* [🔐 Patching a vulnerability](cours-and-tp-m1-cyber/correction-dune-vulnerabilite.md)
+* [🔐 Pentesting wp-mobile-detector plugin](courses-and-hands-on-exercises/pentesting-wp-mobile-detector-plugin.md)
+* [🔐 Patching a vulnerability](courses-and-hands-on-exercises/patching-a-vulnerability.md)
 
 ## 💡 WriteUps
 

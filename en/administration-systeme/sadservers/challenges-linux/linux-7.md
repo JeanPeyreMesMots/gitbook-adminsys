@@ -1,176 +1,220 @@
-# 7 - Bekasi
+# 4 - Oaxaca, Melbourne & Lisbon
 
-**Point de départ :** impossible de redémarrer nginx ou de vérifier sa conf normalement.
+### <mark style="color:$warning;">Oaxaca</mark>
 
-```bash
-nginx -t
-# -bash: nginx: command not found
-systemctl stop nginx
-# Failed to stop nginx.service: Access denied
-systemctl start nginx
-# Failed to start nginx.service: Access denied
-```
+**Goal:** close a file opened by a process, without killing that process.
 
-Pas de binaire `nginx` en accès direct, et `systemctl` refuse même de le stopper sans sudo. Pourtant le service tourne déjà :
+Straight to a search: _"close a file without killing its process"_, which leads to [this superuser thread](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
+
+We look at the open file and the process holding it:
 
 ```bash
-systemctl status nginx.service
-# Active: active (running) since Tue 2026-03-24 17:38:55 UTC
-# ...
-# Failed to parse PID from file /run/nginx.pid: Invalid argument
+ll /home/admin/somefile
+# -rw-r--r-- 1 admin admin 0 Mar 12 16:16 /home/admin/somefile
+
+lsof /home/admin/somefile
+# COMMAND  PID  USER   FD   TYPE DEVICE SIZE/OFF   NODE NAME
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-En regardant la cong de nginx je remarque un truc avec les vhost :
+The file is open by `bash` (PID 1037) on descriptor `77w` (write).
+
+We can see it with `lsof -p`:
+
+```bash
+lsof -p 1037
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
+```
+
+If we close it:
+
+```bash
+exec 77w>&-
+# -bash: exec: 77w: not found
+```
+
+Syntax error: the `w` isn't part of the descriptor number, it's just an indicator in the `lsof` output. This is better:
+
+```bash
+exec 77>&-
+lsof -p 1037
+# (plus rien listé sur ce fichier)
+```
+
+The descriptor is closed, with the bash process still alive. Simpler than expected in the end.
+
+### <mark style="color:$warning;">Melbourne</mark>
+
+**Context:** a Python WSGI app (`/home/admin/wsgi.py`) is supposed to output "**Hello, world!**", behind Gunicorn, itself behind nginx. The expected chain: `curl → nginx → Gunicorn → wsgi.py`. Goal: have `curl localhost` return "Hello, world!".
+
+Nginx is off, we turn it back on:
+
+```bash
+sudo systemctl status nginx
+# Active: inactive (dead)
+sudo systemctl start nginx
+sudo systemctl status nginx
+# Active: active (running)
+```
+
+Config tested, syntax OK:
+
+```bash
+sudo nginx -t
+# syntax ok, test successful
+```
+
+But still not working. It used to work but not anymore :P :
+
+```bash
+curl http://localhost
+# 502 Bad Gateway
+```
+
+Let's look at the wsgi file in question:
+
+```python
+def application(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/html'), ('Content-Length', '0'), ])
+    return [b'Hello, world!']
+```
+
+If we try to launch it in the background:
+
+```bash
+gunicorn wsgi:application --daemon
+```
+
+We get a 502. What do the holy nginx logs say?
+
+```bash
+cat /var/log/nginx/error.log
+# connect() to unix:/run/gunicorn.socket failed (2: No such file or directory)
+```
+
+So nginx is trying to reach a socket that doesn't exist. BUT, looking at Gunicorn's status, it was stopped:
+
+```bash
+sudo systemctl status gunicorn
+# Active: inactive (dead)
+sudo systemctl start gunicorn
+sudo systemctl status gunicorn
+# Active: active (running)
+```
+
+Still a 502 though. I lean toward the phantom socket theory, but looking closer:
+
+```bash
+ls -la /run/gunicorn.socket
+# ls: cannot access '/run/gunicorn.socket': No such file or directory
+ll /run/gunicorn.sock
+# srw-rw-rw- 1 root root 0 Mar 12 18:17 /run/gunicorn.sock
+```
+
+The real socket is actually named `gunicorn.sock` (without the final "**et**"), not `gunicorn.socket`. This typo is visible in the nginx config:
 
 ```nginx
 server {
-    server_name bekasi;
-    listen 443 ssl default_server;
-    ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
-    ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
-
-    location /static {
-        autoindex on;
-        alias /srv/www/assets;
-    }
-
+    listen 80;
     location / {
-        include uwsgi_params;
-        uwsgi_pass unix:/home/admin/bekasi/bekasi.sock;
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.socket;  # --> à corriger en "gunicorn.sock"
     }
 }
 ```
 
-Deux pistes à vérifier : le dossier `/srv/www/assets` référencé pour le statique, et le socket uWSGI `/home/admin/bekasi/bekasi.sock` pour le reste.
-
-Check du dossier statique :
+We fix it, then restart the services involved. And there:
 
 ```bash
-ll /srv/
-# total 8.0K, rien dedans à part . et ..
+curl -I http://localhost
+# HTTP/1.1 200 OK
+# Content-Length: 0
 ```
 
-Vide, pas normal, mais c'est pas le blocage principal (l'appli dynamique passe par uWSGI, pas par ce dossier).
+The headers go through, but Content-Length is 0, so nothing in the response.
 
-Au bout de quelques temps, je check la solution qui mentionne `supervisorctl,`un outil que je ne connaissais pas avant ce chall ([doc utilisée](http://blog.stephane-robert.info/docs/services/processus/supervisor/)), un gestionnaire de process qui peut superviser et relancer des applis (en l'occurrence l'appli Python/uWSGI).
+In **wsgi.py** itself, the file hardcodes `Content-Length: 0` while it actually returns `b'Hello, world!'`, hence the mismatch between the announced header and the real body. I still asked an AI to review the code, which gives in the end:
+
+```python
+def application(environ, start_response):
+    status = '200 OK'
+    output = b'Hello, world!'
+    headers = [('Content-Type', 'text/html'), ('Content-Length', str(len(output)))]
+    start_response(status, headers)
+    return [output]
+```
+
+One of the changes it made sets `Content-Length` to be computed dynamically from the returned content. We hit it locally:
 
 ```bash
-cat /etc/supervisor/supervisord.conf
-# files = /etc/supervisor/conf.d/*.conf
+curl http://localhost
+# Hello, world!
 ```
 
-On regarde les logs supervisor :
+### <mark style="color:$warning;">Lisbon</mark>
+
+**Context:** an etcd server with, apparently, an SSL certificate problem.
 
 ```bash
-cat /var/log/supervisor/supervisord.log
-# CRIT Supervisor is running as root...
-# WARN No file matches via include "/etc/supervisor/conf.d/*.conf"   (avant reconfig)
-# INFO Included extra file "/etc/supervisor/conf.d/uwsgi.conf"
-# INFO spawned: 'bekasi' with pid 8938
-# INFO success: bekasi entered RUNNING state
-# INFO stopped: bekasi (exit status 0)
+ps faux | grep etcd
+# /usr/bin/etcd --cert-file /etc/ssl/certs/localhost.crt --key-file /etc/ssl/certs/localhost.key --advertise-client-urls=https://localhost:2379 --listen-client-urls=https://localhost:2379
 ```
 
-On remarque que le process `bekasi` démarre, tourne un peu, puis s'arrête.
+I started from the idea that the SSL certificate needed renewing based on the system date. I went through several tutorials, all nginx / Let's Encrypt / certbot oriented, but nothing worked.
 
-On lance le binaire à la main déjà pour voir ce qui se passe, sans passer par supervisor :
+Setting the system date back to an earlier one (January 1, 2023), the certificate error did disappear... but another one appeared instead:
 
 ```bash
-./uwsgi
-# The -s/--socket option is missing and stdin is not a socket.
+sudo date -s 01/03/2023
+etcdctl get foo
+# Error: client: response is invalid json. The endpoint is probably not valid etcd cluster endpoint.
 ```
 
-Arf, il faut préciser le socket :
+So the certificate wasn't the root cause, just a symptom tied to the date, not the root cause.
+
+We test the etcd endpoints directly over HTTPS:
 
 ```bash
-./uwsgi -s ../bekasi.sock
-# uwsgi socket 0 bound to UNIX address ../bekasi.sock fd 3
-# *** no app loaded. going in full dynamic mode ***
-# spawned uWSGI worker 1 (and the only) (pid: 1590, cores: 1)
+curl https://localhost:2379/v2/keys/foo
+# 404 Not Found (nginx)
+curl https://localhost:2379/v2/
+# 404 Not Found (nginx)
+curl https://localhost:2379/
+# Testing SSL
 ```
 
-Ça tourne. On passe en arrière-plan pour tester en parallèle :
+Still stuck on "Testing SSL...". Checking the nginx config: nothing wrong on the surface (listening on 443, syntactically valid config):
 
 ```bash
-# Ctrl+Z puis :
-bg
-curl -k https://bekasi
-# 502 Bad Gateway
+sudo nginx -t
+# syntax ok, test successful
 ```
 
-Mais toujours un 502 malgré uWSGI apparemment lancé. Soit nginx ne pointe pas où il faut, soit uWGI ne répond pas correctement à ce socket précis.
-
-Cependant via `supervisorctl`, on remarque que le process tourne aussi et log du détail :
+On to the iptables rules, the NAT table in particular:
 
 ```bash
-sudo supervisorctl
-# bekasi   RUNNING   pid 1210, uptime 0:20:21
-supervisor> tail -f bekasi
-# *** Operational MODE: preforking ***
-# WSGI app 0 (mountpoint='') ready in 0 seconds ...
-# spawned uWSGI master process (pid: 1210)
-# spawned uWSGI worker 1..5
+sudo iptables -t nat -L
 ```
 
-En comparant la sortie du lancement manuel avec celle du supervisor, on voit une différence notable dans les toutes premières lignes du lancement manuel :
-
 ```
-!!! no internal routing support, rebuild with pcre support !!!
-*** WARNING: you are running uWSGI without its master process manager ***
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+REDIRECT   tcp  --  anywhere             anywhere             tcp dpt:2379 redir ports 443
 ```
 
-Ces lignes n'apparaissent pas dans la version supervisor. On en déduit donc que l'environnement d'exécution diffère entre les deux lancements. D'où le fait que la piste de solution suggérait de vérifier `~/.bashrc` :
+Found it: **all** TCP traffic destined for port 2379 (etcd) is forwarded to port 443 by iptables. That rule was causing the nginx 404s instead of etcd responses.&#x20;
+
+We remove the redirect rules from the OUTPUT chain of the NAT table:
 
 ```bash
-tail -f ~/.bashrc
-export BEKASI_SERVER=bekasi.sadservers.com
-export BEKASI_USER=admin
+sudo iptables -t nat -F OUTPUT
 ```
 
-On retrouve deux variables d'environnement définies uniquement dans le shell interactif de l'utilisateur. Elles sont donc présentes quand on lance `uwsgi` à la main depuis ce shell, mais absentes du contexte dans lequel `supervisord` lance ses process (qui source pas `~/.bashrc`).
-
-Vérification de la conf supervisor existante :
+Then check for anything new:
 
 ```bash
-cat /etc/supervisor/conf.d/uwsgi.conf
-[program:bekasi]
-autorestart=true
-command=/home/admin/bekasi/bin/uwsgi --ini /home/admin/bekasi/bekasi.ini
-directory=/home/admin/bekasi
-redirect_stderr=true
-stdout_logfile=/var/log/bekasi.log
-user=admin
+curl https://localhost:2379/v2/keys/foo
+# {"action":"get","node":{"key":"/foo","value":"bar","modifiedIndex":4,"createdIndex":4}}
 ```
 
-Aucune variable d'environnement définie ici, on en ajoute deux avec les nécessaires :
-
-```ini
-[program:bekasi]
-autorestart=true
-command=/home/admin/bekasi/bin/uwsgi --ini /home/admin/bekasi/bekasi.ini
-directory=/home/admin/bekasi
-redirect_stderr=true
-stdout_logfile=/var/log/bekasi.log
-user=admin
-environment=BEKASI_SERVER="bekasi.sadservers.com",BEKASI_USER="admin"
-```
-
-Puis on recharge le tout :
-
-```bash
-sudo supervisorctl
-supervisor> reread
-# bekasi: changed
-supervisor> update
-# bekasi: stopped
-# bekasi: updated process group
-```
-
-Test final :
-
-```bash
-curl -k https://bekasi
-# Hello SadServers!
-```
-
-Résolu.
+Solved.

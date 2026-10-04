@@ -1,248 +1,220 @@
-# 6 - Paris, Manado & Moyogalpa
+# 4 - Oaxaca, Melbourne & Lisbon
 
-### <mark style="color:$warning;">Paris</mark>
+### <mark style="color:$warning;">Oaxaca</mark>
 
-Un peu de hacking, comme au bon vieux temps :D
+**Goal:** close a file opened by a process, without killing that process.
 
-#### Reconnaissance
+Straight to a search: _"close a file without killing its process"_, which leads to [this superuser thread](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
 
-Process en cours :
+We look at the open file and the process holding it:
 
 ```bash
-ps -faux | grep "python"
-# root  693  ... /usr/bin/python3 /home/admin/webserver.py
+ll /home/admin/somefile
+# -rw-r--r-- 1 admin admin 0 Mar 12 16:16 /home/admin/somefile
+
+lsof /home/admin/somefile
+# COMMAND  PID  USER   FD   TYPE DEVICE SIZE/OFF   NODE NAME
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-Test de l'endpoint :
+The file is open by `bash` (PID 1037) on descriptor `77w` (write).
+
+We can see it with `lsof -p`:
 
 ```bash
-curl -v http://localhost:5000
+lsof -p 1037
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
+```
+
+If we close it:
+
+```bash
+exec 77w>&-
+# -bash: exec: 77w: not found
+```
+
+Syntax error: the `w` isn't part of the descriptor number, it's just an indicator in the `lsof` output. This is better:
+
+```bash
+exec 77>&-
+lsof -p 1037
+# (plus rien listé sur ce fichier)
+```
+
+The descriptor is closed, with the bash process still alive. Simpler than expected in the end.
+
+### <mark style="color:$warning;">Melbourne</mark>
+
+**Context:** a Python WSGI app (`/home/admin/wsgi.py`) is supposed to output "**Hello, world!**", behind Gunicorn, itself behind nginx. The expected chain: `curl → nginx → Gunicorn → wsgi.py`. Goal: have `curl localhost` return "Hello, world!".
+
+Nginx is off, we turn it back on:
+
+```bash
+sudo systemctl status nginx
+# Active: inactive (dead)
+sudo systemctl start nginx
+sudo systemctl status nginx
+# Active: active (running)
+```
+
+Config tested, syntax OK:
+
+```bash
+sudo nginx -t
+# syntax ok, test successful
+```
+
+But still not working. It used to work but not anymore :P :
+
+```bash
+curl http://localhost
+# 502 Bad Gateway
+```
+
+Let's look at the wsgi file in question:
+
+```python
+def application(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/html'), ('Content-Length', '0'), ])
+    return [b'Hello, world!']
+```
+
+If we try to launch it in the background:
+
+```bash
+gunicorn wsgi:application --daemon
+```
+
+We get a 502. What do the holy nginx logs say?
+
+```bash
+cat /var/log/nginx/error.log
+# connect() to unix:/run/gunicorn.socket failed (2: No such file or directory)
+```
+
+So nginx is trying to reach a socket that doesn't exist. BUT, looking at Gunicorn's status, it was stopped:
+
+```bash
+sudo systemctl status gunicorn
+# Active: inactive (dead)
+sudo systemctl start gunicorn
+sudo systemctl status gunicorn
+# Active: active (running)
+```
+
+Still a 502 though. I lean toward the phantom socket theory, but looking closer:
+
+```bash
+ls -la /run/gunicorn.socket
+# ls: cannot access '/run/gunicorn.socket': No such file or directory
+ll /run/gunicorn.sock
+# srw-rw-rw- 1 root root 0 Mar 12 18:17 /run/gunicorn.sock
+```
+
+The real socket is actually named `gunicorn.sock` (without the final "**et**"), not `gunicorn.socket`. This typo is visible in the nginx config:
+
+```nginx
+server {
+    listen 80;
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.socket;  # --> à corriger en "gunicorn.sock"
+    }
+}
+```
+
+We fix it, then restart the services involved. And there:
+
+```bash
+curl -I http://localhost
 # HTTP/1.1 200 OK
-# Server: Werkzeug/3.1.4 Python/3.13.5
-# ...
-Unauthorized
+# Content-Length: 0
 ```
 
-Réponse 200 mais contenu "Unauthorized" — donc pas une vraie 401, l'appli gère l'auth elle-même dans le corps de la réponse.
+The headers go through, but Content-Length is 0, so nothing in the response.
 
-Petit script bash pour tester une liste de couples login/mdp courants (admin:admin, root:root, guest:guest, etc.) :
+In **wsgi.py** itself, the file hardcodes `Content-Length: 0` while it actually returns `b'Hello, world!'`, hence the mismatch between the announced header and the real body. I still asked an AI to review the code, which gives in the end:
+
+```python
+def application(environ, start_response):
+    status = '200 OK'
+    output = b'Hello, world!'
+    headers = [('Content-Type', 'text/html'), ('Content-Length', str(len(output)))]
+    start_response(status, headers)
+    return [output]
+```
+
+One of the changes it made sets `Content-Length` to be computed dynamically from the returned content. We hit it locally:
 
 ```bash
-for cred in "${creds[@]}"; do
-  username="${cred%%:*}"
-  password="${cred#*:}"
-  response=$(curl -s -u "$username:$password" "$URL")
-  if [[ ! "$response" =~ Unauthorized ]]; then
-    echo "SUCCESS! avec $username:$password"
-    exit 0
-  fi
-done
+curl http://localhost
+# Hello, world!
 ```
 
-Aucun succès. Recherche d'exploits connus sur le stack utilisé : rien de concluant non plus.
+### <mark style="color:$warning;">Lisbon</mark>
 
-#### La faille : header User-Agent absent
-
-Idée testée un peu au hasard : retirer complètement le header `User-Agent` de la requête.
+**Context:** an etcd server with, apparently, an SSL certificate problem.
 
 ```bash
-curl -v -u admin:admin -H "User-Agent:" http://localhost:5000
-# HTTP/1.1 200 OK
-# Content-Length: 35
-Welcome! Password is FDZPmh5AX3oiJt
+ps faux | grep etcd
+# /usr/bin/etcd --cert-file /etc/ssl/certs/localhost.crt --key-file /etc/ssl/certs/localhost.key --advertise-client-urls=https://localhost:2379 --listen-client-urls=https://localhost:2379
 ```
 
-Bingo, sans User-Agent l'appli laisse passer un mot de passe en clair dans la réponse.
+I started from the idea that the SSL certificate needed renewing based on the system date. I went through several tutorials, all nginx / Let's Encrypt / certbot oriented, but nothing worked.
 
-On spray le mdp avec différents logins (admin, root, sad, sadservers, guest...) : à chaque fois la même réponse "**Welcome**!" revient, peu importe le login utilisé.
-
-Donc ce n'était pas un vrai identifiant de connexion, mais très probablement directement la solution du challenge :
+Setting the system date back to an earlier one (January 1, 2023), the certificate error did disappear... but another one appeared instead:
 
 ```bash
-echo "FDZPmh5AX3oiJt" > ~/mysolution
+sudo date -s 01/03/2023
+etcdctl get foo
+# Error: client: response is invalid json. The endpoint is probably not valid etcd cluster endpoint.
 ```
 
-Confirmé :)
+So the certificate wasn't the root cause, just a symptom tied to the date, not the root cause.
 
-### <mark style="color:$warning;">Manado</mark>
-
-_(Note prise rapidement, à détailler plus tard)_
-
-Exercice autour de la commande `sort` et de la compression `xz` :
+We test the etcd endpoints directly over HTTPS:
 
 ```bash
-sort names > names_COPY
-ll
-# -rw-r--r-- 1 root  root  35147 Mar  2  2024 names
-# -rw-r--r-- 1 admin admin 35148 Mar 23 16:43 names_COPY
+curl https://localhost:2379/v2/keys/foo
+# 404 Not Found (nginx)
+curl https://localhost:2379/v2/
+# 404 Not Found (nginx)
+curl https://localhost:2379/
+# Testing SSL
 ```
 
-On compresse :
+Still stuck on "Testing SSL...". Checking the nginx config: nothing wrong on the surface (listening on 443, syntactically valid config):
 
 ```bash
-xz -k names_COPY
-# crée names_COPY.xz (9328 octets), garde l'original grâce à -k
-rm names_COPY.xz
+sudo nginx -t
+# syntax ok, test successful
 ```
 
-Tentative avec le niveau de compression maximal :
+On to the iptables rules, the NAT table in particular:
 
 ```bash
-xz -9 names_COPY
-# xz: names_COPY: Cannot allocate memory
+sudo iptables -t nat -L
 ```
 
-Échec, pas assez d'espace disque. Essayons avec le niveau 5 :
+```
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+REDIRECT   tcp  --  anywhere             anywhere             tcp dpt:2379 redir ports 443
+```
+
+Found it: **all** TCP traffic destined for port 2379 (etcd) is forwarded to port 443 by iptables. That rule was causing the nginx 404s instead of etcd responses.&#x20;
+
+We remove the redirect rules from the OUTPUT chain of the NAT table:
 
 ```bash
-xz -5 names_COPY
-ll
-# names_COPY.xz  9336 octets
+sudo iptables -t nat -F OUTPUT
 ```
 
-Ça fonctionne, on copie le résultat dans le dossier solution  :
+Then check for anything new:
 
 ```bash
-cp names_COPY.xz solution/
+curl https://localhost:2379/v2/keys/foo
+# {"action":"get","node":{"key":"/foo","value":"bar","modifiedIndex":4,"createdIndex":4}}
 ```
 
-### <mark style="color:$warning;">Moyogalpa</mark>
-
-**Contexte :** une appli en Go sécurisée par John et Mike, cassée par eux. Le chall nous donne un cahier des charges :
-
-* communication uniquement en HTTPS ;
-* accès limité aux seuls fichiers nécessaires (certificats + fichiers statiques) ;
-* rate limiting à 10 requêtes/seconde ;
-* exécution sous utilisateur non-root.
-
-Au début, pourquoi j'ai galéré car l'appli n'était pas lancée à la main (via un `go run ...`), mais gérée comme service systemd. J'ai mis un moment à me décider qu'il fallait regarder les logs via `journalctl -u webapp` plutôt que chercher un process lancé manuellement.
-
-```bash
-sudo journalctl -u webapp
-# open /home/webapp/pki/server.crt: permission denied
-# open /home/webapp/pki/server.pem: permission denied
-# can not access certificate/key file. sleeping for 10s and will retry
-```
-
-Déjà les permissions sur les certificats sont pas ok, on commence par les corriger :
-
-```bash
-ll /home/webapp/pki/
-# ls: cannot open directory '/home/webapp/pki/': Permission denied
-ll /home/webapp/
-# drwx------ 2 root root 4096 Apr 10 2024 pki
-```
-
-```bash
-sudo chmod -R 755 pki/
-sudo chown -R admin: pki/
-```
-
-Mais ça veut pas :
-
-```bash
-open /home/webapp/pki/server.pem: permission denied
-```
-
-Avec une boucle openssh on peut tester la validité de chaque chaque fichier de certificat :
-
-```bash
-for cert in *.crt *.pem; do
-    openssl x509 -in "$cert" -noout -dates 2>/dev/null || echo "Pas un certificat"
-done
-# CA.crt : OK
-# server.crt : OK
-# server.pem : Pas un certificat
-```
-
-`server.pem` n'est pas reconnu comme certificat. En regardant son contenu :
-
-```bash
-head server.pem
-# -----BEGIN RSA PRIVATE KEY-----
-```
-
-Logique : il s'agit d'une clé privée RSA, pas d'un certificat, donc `openssl x509` ne peut pas le lire. On vérifie quand même que la clé est valide et qu'elle correspond bien au certificat :
-
-```bash
-openssl rsa -in server.pem -check -noout
-# RSA key ok
-
-openssl rsa -noout -modulus -in server.pem | openssl md5
-openssl x509 -noout -modulus -in server.crt | openssl md5
-# mêmes hash des deux côtés → la paire clé/certificat est cohérente
-```
-
-Les fichiers eux-mêmes sont sains. J'ai ajusté les permissions sur les fichiers statiques par précaution :
-
-```bash
-sudo chmod -R 755 static-files/
-```
-
-Mais sans effets sur le problème principal.
-
-Après avoir remis les fichiers au bon proprio (`webapp:webapp` plutôt qu'`admin`), et cherché la solution en ligne, j'ai découvert qu'il fallait mettre le certificat dans le dossier système " _**/usr/local/share/ca-certificates/**_" pour éviter d'avoir à utiliser `--cacert` à chaque requête :
-
-```bash
-sudo cp /home/webapp/pki/CA.crt /usr/local/share/ca-certificates/webappCA.crt
-sudo chmod 644 /usr/local/share/ca-certificates/webappCA.crt
-sudo update-ca-certificates
-```
-
-On test :
-
-```bash
-curl https://webapp:7000
-# curl: (6) Could not resolve host: webapp
-```
-
-On va y arriver :D Le nom d'hôte `webapp` se résout pas car pas présent dans /etc/hosts, on l'ajoute dedans :
-
-```bash
-echo "127.0.0.1 webapp" | sudo tee --append /etc/hosts
-```
-
-Nouvelle erreur, différente cette fois-ci :
-
-```bash
-curl https://webapp:7000
-# Forbidden
-```
-
-Hop là les logs :
-
-```bash
-open /home/webapp/static-files/users.html: permission denied
-```
-
-Et là, le vraie coupable se montre. En cherchant le message "**permission denied**" sur Google, l'application est confinée par un profil AppArmor (`/etc/apparmor.d/usr.local.bin.webapp`), qui autorisait l'accès aux certificats mais pas aux fichiers statiques. Le profil se présente comme suit :
-
-```
-/home/webapp/pki/ r,
-/home/webapp/pki/server.pem r,
-/home/webapp/pki/server.crt r,
-# manquant : accès à static-files
-```
-
-On ajoute les lignes nécessaires :
-
-```
-/home/webapp/static-files/ r,
-/home/webapp/static-files/* r,
-```
-
-Et on reload :
-
-```bash
-apparmor_parser -r /etc/apparmor.d/usr.local.bin.webapp
-```
-
-Test final :
-
-```bash
-curl https://webapp:7000/users.html
-# <p>From Users Page</p>
-```
-
-Résolu. Dans l'ordre on a réglé les permissions classiques, vérifié les certificats, la DNS locale, et enfin le AppArmor.
-
+Solved.

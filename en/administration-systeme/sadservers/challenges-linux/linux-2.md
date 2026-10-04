@@ -2,20 +2,20 @@
 
 ## <mark style="color:$warning;">Rio de Janeiro</mark>
 
-Il faut aussi débug du Jenkins. Le service ne voulait pas démarrer correctement, direction `systemctl status` pour comprendre ⇒ status en stopped.
+Some Jenkins debugging here. The service wouldn't start properly, so off to `systemctl status` to understand ⇒ status stopped.
 
-Jenkins 2.516.3 refusait de démarrer proprement car il tournait avec une version de Java non recommandée pour cette version (Java 8 au départ, puis Java 25 signalé "not fully supported"). L'objectif est donc de basculer Jenkins sur Java 21, déjà installé sur la machine mais pas utilisé par défaut.
+Jenkins 2.516.3 refused to start cleanly because it was running on a Java version not recommended for it (Java 8 at first, then Java 25 flagged as "not fully supported"). The goal is therefore to switch Jenkins to Java 21, already installed on the machine but not used by default.
 
-On regarde quelles versions sont utilisées par défaut :
+We check which versions are used by default:
 
 ```bash
 java -version
 javac -version
 ```
 
-`java` pointait sur une vieille version (Java 8) tandis que `javac` pointait sur une version plus récente. Incohérence à corriger.
+`java` pointed to an old version (Java 8) while `javac` pointed to a newer one. An inconsistency to fix.
 
-Sur Ubuntu/Debian, la gestion de plusieurs JVM se fait avec `update-alternatives`. On liste les versions installées :
+On Ubuntu/Debian, managing several JVMs is done with `update-alternatives`. We list the installed versions:
 
 ```bash
 sudo update-alternatives --config java
@@ -32,9 +32,9 @@ There are 3 choices for the alternative java (providing /usr/bin/java).
   3            /usr/lib/jvm/temurin-8-jdk-amd64/bin/java     1081      manual mode
 ```
 
-Java 8, 21 et 25 sont installés. Java 25 est sélectionné automatiquement mais pas pleinement supporté par cette version de Jenkins.
+Java 8, 21 and 25 are installed. Java 25 is selected automatically but not fully supported by this Jenkins version.
 
-On force Java 21 (entrée `1`) :
+We force Java 21 (entry `1`):
 
 ```bash
 sudo update-alternatives --config java
@@ -42,9 +42,9 @@ sudo update-alternatives --config java
 # update-alternatives: using /usr/lib/jvm/java-21-openjdk-amd64/bin/java to provide /usr/bin/java (java) in manual mode
 ```
 
-Même manip pour `javac`. Ensuite `java -version` et `javac -version` renvoient bien Java 21.
+Same for `javac`. After that, `java -version` and `javac -version` both return Java 21.
 
-On relance le service :
+We restart the service:
 
 ```bash
 sudo systemctl status jenkins.service
@@ -59,36 +59,36 @@ sudo systemctl start jenkins.service
 Mar 09 18:39:17 i-0899387007d013833 jenkins[4169]: ... Jenkins is fully up and running
 ```
 
-Puis on check que le port 8888 répond :
+Then we check that port 8888 responds:
 
 ```bash
 curl -s localhost:8888/login | grep Jenkins | head -n1
 # <title>Sign in - Jenkins</title>...
 ```
 
-On nous renvoi un "**Sign in - Jenkins**", l'interface web est donc accessible. Challenge résolu.
+It returns a "**Sign in - Jenkins**", so the web interface is reachable. Challenge solved.
 
 ## <mark style="color:$warning;">Nuuk</mark>
 
-Le titre du chall me rappel **SSHNuke**, référence à Matrix :P
+The challenge name reminds me of **SSHNuke**, a Matrix reference :P
 
-**Objectif :** SSH ne fonctionnait pas en local sur la machine, malgré la présence des bonnes clés dans `~/.ssh/authorized_keys`.
+**Goal:** SSH wasn't working locally on the machine, despite the right keys being present in `~/.ssh/authorized_keys`.
 
-Du gâteau, un simple coup d'œil sur le `.ssh` suffit à voir que les permissions étaient mauvaises :
+A piece of cake: a quick look at `.ssh` is enough to see the permissions were wrong:
 
 ```bash
 ll
 # d--------- 2 admin admin 4.0K Oct 21 17:27 .ssh
 ```
 
-Aucune permission sur le dossier. On corrige :
+No permissions on the directory. We fix it:
 
 ```bash
 sudo chmod 755 .ssh/
 # drwxr-xr-x 2 admin admin 4.0K Oct 21 17:27 .ssh
 ```
 
-Puis on se connecte en local sur la machine :
+Then we connect locally to the machine:
 
 ```bash
 ssh 127.0.0.1
@@ -98,11 +98,11 @@ ssh 127.0.0.1
 admin@i-0a31a7ab947fad896:~$
 ```
 
-Connexion réussie.
+Connection successful.
 
 ## <mark style="color:$warning;">Cairo</mark>
 
-**Contexte :** un script de health check critique (`/opt/scripts/health.sh`) est censé tourner toutes les 10 secondes via un timer systemd :
+**Context:** a critical health-check script (`/opt/scripts/health.sh`) is supposed to run every 10 seconds via a systemd timer:
 
 ```bash
 #!/bin/bash
@@ -116,16 +116,16 @@ else
 fi
 ```
 
-Comme vous allez le voir, celui-là m'a fait tourner en rond un bon moment.
+As you'll see, this one had me going in circles for a good while.
 
-En testant manuellement la commande dans le script :
+Testing the command from the script manually:
 
 ```bash
 curl http://localhost
 ^C
 ```
 
-Rien n'arrive, ça reste bloqué à "Trying" :
+Nothing happens, it stays stuck at "Trying":
 
 ```bash
 curl -v http://localhost
@@ -143,23 +143,21 @@ systemctl status nginx
      Main PID: 779 (nginx)
 ```
 
-On check les logs :
+We check the logs:
 
 ```bash
 cat /var/log/nginx/error.log
 2025/11/22 16:01:28 [notice] 1600#1600: using inherited sockets from "5;6;"
 ```
 
-Une seule ligne, un simple "notice", rien qui saute aux yeux. La syntaxe est pourtant bonne :
+A single line, a simple "notice", nothing obvious. And the syntax is fine:
 
 ```bash
 sudo nginx -t
 # nginx: configuration file /etc/nginx/nginx.conf test is successful
 ```
 
-Rien d'anormal dans la conf non plus. Serait-ce le début d'un rabbit hole ?
-
-
+Nothing wrong in the config either. Could this be the start of a rabbit hole?
 
 ```bash
 sudo nginx
@@ -168,7 +166,7 @@ nginx: [emerg] bind() to [::]:80 failed (98: Address already in use)
 nginx: [emerg] still could not bind()
 ```
 
-Problème de bind, donc avec les ports. Le port 80 est déjà utilisé mais par quoi ?
+A bind problem, so a port issue. Port 80 is already in use, but by what?
 
 ```bash
 sudo ss -tuln | grep :80
@@ -177,7 +175,7 @@ tcp   LISTEN 0      511               [::]:80            [::]:*
 tcp   LISTEN 0      4096                 *:8080             *:*
 ```
 
-Arf, par nginx lui-même qui écoute déjà sur le port 80 (le process `systemctl status` tournait bien d'ailleurs) :
+By nginx itself, which is already listening on port 80 (the `systemctl status` process was indeed running):
 
 ```bash
 sudo systemctl stop nginx
@@ -185,17 +183,17 @@ sudo ss -tuln | grep :80
 # tcp   LISTEN 0      4096                 *:8080             *:*
 ```
 
-Après arrêt, le port 80 se libère bien. Donc nginx tourne correctement et écoute bien sur le bon port. Le problème est donc ailleurs.
+After stopping it, port 80 is freed. So nginx runs fine and listens on the right port. The problem is elsewhere.
 
-J'ai fini par demander à l'ami Claude d'analyser ce log :
+I ended up asking my friend Claude to analyze this log:
 
 ```bash
 2025/11/22 16:01:28 [notice] 1600#1600: using inherited sockets from "5;6;"
 ```
 
-Réponse : "théorie de sockets "zombies" hérités d'un redémarrage de conteneur, qui bloqueraient le port 80 malgré l'absence de process visible dans `ss`." Rien que ça. La solution proposée est de tuer tous les process nginx avec `pkill -9`, vérifier le port, relancer, et en dernier recours `fuser -k 80/tcp`.
+Answer: a theory of "zombie" sockets inherited from a container restart, blocking port 80 despite no visible process in `ss`. Quite something. The suggested fix is to kill all nginx processes with `pkill -9`, check the port, restart, and as a last resort `fuser -k 80/tcp`.
 
-Est-ce que l'IA avait raison ?
+Was the AI right?
 
 ```bash
 sudo pkill -9 nginx
@@ -210,9 +208,9 @@ curl http://localhost        # toujours aucune réponse
 
 <figure><img src="../../../.gitbook/assets/image (40).png" alt=""><figcaption></figcaption></figure>
 
-Nope. Même après avoir fait ça, toujours pas de réponse contenu avec curl en localhost.
+Nope. Even after that, still no response from a local curl.
 
-Allons faire un tour dans les règles iptables ?
+Let's take a look at the iptables rules, the NAT table in particular?
 
 ```bash
 sudo iptables -L -n
@@ -223,15 +221,15 @@ target     prot opt source               destination
 DROP       tcp  --  0.0.0.0/0            127.0.0.1            tcp dpt:80 /* The hidden problem (IPv4) */
 ```
 
-Vwelàaaaa, une règle DROP explicitement commentée "The hidden problem". Tu m'as eu hein saligots !
+There it is, a DROP rule explicitly commented "The hidden problem". Got me, you rascals!
 
-Hop on enlève ça :
+Let's remove it:
 
 ```bash
 sudo iptables -D OUTPUT 1
 ```
 
-Et ça répond enfin !
+And it finally responds!
 
 ```bash
 curl http://localhost | grep "Welcome to"
@@ -239,14 +237,14 @@ curl http://localhost | grep "Welcome to"
 <h1>Welcome to nginx!</h1>
 ```
 
-On test le script directement :
+We test the script directly:
 
 ```bash
 bash /opt/scripts/health.sh
 # /opt/scripts/health.sh: line 4: /var/log/health.log: Permission denied
 ```
 
-Arf. Avec sudo peut-être ?
+Hmm. With sudo maybe?
 
 ```bash
 sudo bash /opt/scripts/health.sh
@@ -254,7 +252,7 @@ head /var/log/health.log
 # Tue Mar 10 19:41:48 UTC 2026: STATUS: OK
 ```
 
-Parfait. On vérifie si le timer systemd censé lancer ce script toutes les 10 secondes existe :
+Perfect. We check whether the systemd timer meant to run this script every 10 seconds exists:
 
 ```bash
 sudo systemctl list-unit-files --type=timer
@@ -262,7 +260,7 @@ sudo systemctl list-unit-files --type=timer
 # health.timer                 disabled enabled
 ```
 
-Il existe mais est désactivé. On l'active :
+It exists but is disabled. We enable it:
 
 ```bash
 sudo systemctl enable --now health.timer
@@ -274,11 +272,11 @@ agent/check.sh
 # OK
 ```
 
-Résolu !
+Solved!
 
 ## <mark style="color:$warning;">Alexandria</mark>
 
-**Contexte :** un job de backup cron mal configuré.
+**Context:** a misconfigured cron backup job.
 
 ```bash
 crontab -l
@@ -290,20 +288,20 @@ MAILTO="broken@nonexistent.local"
 */5 * * * * /opt/backup/old_backup.sh > /dev/null 2>&1
 ```
 
-Deux problèmes visibles direct : le script appelé est `old_backup.sh`, et il tourne toutes les 5 minutes au lieu de la fréquence attendue. On fix :
+Two problems visible right away: the script being called is `old_backup.sh`, and it runs every 5 minutes instead of the expected frequency. We fix it:
 
 ```bash
 */10 * * * * /opt/backup/backup.sh > /dev/null 2>&1
 ```
 
-Puis test du script :
+Then we test the script:
 
 ```bash
 ./backup.sh
 # Error: Backup already running (lock file exists)
 ```
 
-Un fichier de lock bloque l'exécution. On le sort :
+A lock file blocks execution. We remove it:
 
 ```bash
 sudo rm backup.lock
@@ -313,11 +311,11 @@ sudo rm backup.lock
 # Backup failed!
 ```
 
-En sudo ça sera mieux ;) :
+With sudo it'll be better ;) :
 
 ```bash
 sudo ./backup.sh
 # Backup successful: /var/backups/daily/backup_20260311_090432.tar.gz
 ```
 
-Résolu.
+Solved.

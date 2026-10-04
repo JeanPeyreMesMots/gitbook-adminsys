@@ -2,9 +2,9 @@
 
 ## <mark style="color:$warning;">Apia</mark>
 
-**Objectif :** un mot a été ajouté dans un fichier parmi une centaine, il faut le retrouver et fournir la solution sous forme de hash MD5.
+**Goal:** a word was added to one file among a hundred; find it and provide the solution as an MD5 hash.
 
-On commence par lister tous les fichiers :
+We start by listing all the files:
 
 ```bash
 ls -l
@@ -14,39 +14,39 @@ total 404
 -rw-r--r-- 1 admin admin 1046 Feb 25  2024 file10.txt
 ```
 
-Puisqu'on sait qu'un seul mot a été ajouté, un seul fichier doit avoir sa taille changée. En triant par taille décroissante, le fichier modifié ressort direct en première ligne :
+Since we know only one word was added, exactly one file should have a different size. Sorting by descending size, the modified file comes up right on the first line:
 
 ```bash
 ls -lS
 -rw-r--r-- 1 admin admin 1054 Feb 25  2024 file76.txt
 ```
 
-On passe ensuite les deux fichiers à `vimdiff` :
+We then diff the two files with `vimdiff`:
 
 ```bash
 vimdiff file76.txt file0.txt
 ```
 
-Le mot est bien trouvé, il s'agit de **"eureka"**. Plus qu'à le mettre dans la solution :
+The word is found: it's **"eureka"**. We just put it in the solution file:
 
 ```bash
 echo "eureka" > /home/admin/solution
 ```
 
-Et vérifier que le hash correspond à celui attendu par le chall :
+And check that the hash matches the one the challenge expects:
 
 ```bash
 md5sum /home/admin/solution
 55aba155290288b58e9b778c8f616560  /home/admin/solution
 ```
 
-Ce qui est bien le cas.
+Which it does.
 
 ## <mark style="color:$warning;">Tokamachi</mark>
 
-**Objectif :** un writer doit envoyer des messages en continu dans un named pipe situé à (`/home/admin/namedpipe`), puis un reader les capture avec logs horodatés dans `/home/admin/reader.log`.
+**Goal:** a writer must continuously send messages to a named pipe (`/home/admin/namedpipe`), and a reader captures them with timestamped logs in `/home/admin/reader.log`.
 
-Le reader tourne déjà, avec un délai de 2 secondes entre chaque lecture :
+The reader is already running, with a 2-second delay between reads:
 
 ```bash
 nohup /bin/bash -c 'while true; do
@@ -57,47 +57,47 @@ nohup /bin/bash -c 'while true; do
 done' &>/dev/null &
 ```
 
-Le writer proposé par défaut par SadServers n'a lui aucun délai :
+The writer provided by default by SadServers has no delay:
 
 ```bash
 /bin/bash -c 'while true; do echo "this is a test message being sent to the pipe" > /home/admin/namedpipe; done' &
 ```
 
-J'ai d'abord essayé de corriger la syntaxe du writer comme suggéré, avec un `sleep 3` :
+I first tried fixing the writer's syntax as suggested, with a `sleep 3`:
 
 ```bash
 /bin/bash -c 'while true; do if read line < /home/admin/namedpipe; then echo "$(date) Received: $line" >> /home/admin/reader.log; fi; sleep 3; done'
 ```
 
-Mais ça ne marchait pas. On peut tenter une indentation et un `2>/dev/null` :
+But it didn't work. We can also try adding indentation and a `2>/dev/null`:
 
 ```bash
 /bin/bash -c 'while true; do if read line < /home/admin/namedpipe 2>/dev/null; then echo "$(date) Received: $line" >> /home/admin/reader.log; fi; sleep 2; done'
 ```
 
-Mais ça rend le log vide, et SadServers n'acceptait pas la solution.
+But that leaves the log empty, and SadServers didn't accept the solution.
 
-Après avoir tué l'ancien processus writer (`ps` + `grep "pipe"` pour trouver le PID, puis `kill`), la commande qui a fonctionné utilise `nohup` :
+After killing the old writer process (`ps` + `grep "pipe"` to find the PID, then `kill`), the command that worked uses `nohup`:
 
 ```bash
 nohup /bin/bash -c 'while true; do echo "this is a test message being sent to the pipe" > /home/admin/namedpipe; sleep 2; done' &
 ```
 
-`nohup` (pour « no hang up ») lance une commande de manière à ce qu'il continue de s'exécuter même si la session terminal qui l'a lancé est fermée ou interrompue. Il détache la commande de la session courante et la place dans un processus indépendant, garantissant la persistance de son exécution.
+`nohup` ("no hang up") runs a command so that it keeps running even if the terminal session that started it is closed or interrupted. It detaches the command from the current session and places it in an independent process, keeping it alive.
 
-source : [zonetuto.fr](https://zonetuto.fr/shell-bash/nohup-lancer-un-script-en-arriere-plan-sur-un-serveur-linux/)
+source: [zonetuto.fr](https://zonetuto.fr/shell-bash/nohup-lancer-un-script-en-arriere-plan-sur-un-serveur-linux/)
 
 ## <mark style="color:$warning;">Yokohama</mark>
 
-**Objectif :** gestion de permissions pour 4 users (**abe**, **betty**, **carlos**, **debora**) :
+**Goal:** manage permissions for 4 users (**abe**, **betty**, **carlos**, **debora**):
 
-* chacun modifie son propre fichier ;
-* personne ne peut _lire_ les fichiers des autres, mais peut y _écrire_ ;
-* tous peuvent modifier le contenu de `shared/project_ALL`, sauf sa première ligne.
+* each one can modify their own file;
+* nobody can _read_ the others' files, but can _write_ to them;
+* everyone can modify the contents of `shared/project_ALL`, except its first line.
 
-On a les accès root, donc on peut ajuster les droits librement.
+We have root access, so we can adjust the permissions freely.
 
-Au début on a ça :
+At the start we have this:
 
 ```bash
 ls -l /home/admin/shared
@@ -109,7 +109,7 @@ total 20
 -rw-r----- 1 debora debora 30 Feb  2  2025 project_debora
 ```
 
-On se loge avec un autre user comme **debora**, mais il n'a ni lecture ni écriture possible sur les fichiers des autres :
+We log in as another user, such as **debora**, who can neither read nor write the others' files:
 
 ```bash
 sudo su - debora
@@ -122,9 +122,9 @@ cat: project_carlos: Permission denied
 "This is debora's project file"
 ```
 
-Pour gagner du temps sur le calcul des octales des permissions, un outil fort pratique : [chmod-calculator.com](https://chmod-calculator.com/).
+A handy tool to save time computing octal permissions: [chmod-calculator.com](https://chmod-calculator.com/).
 
-Pour les fichiers `project_USER`, le bit d'exécution n'est pas nécessaire, on a juste besoin de read + write pour le groupe qui porte le même nom que le user. Puis on se connecte avec chaque user pour appliquer les permissions correspondantes, exemple avec debora :
+For the `project_USER` files, the execute bit isn't needed; we just need read + write for the group that has the same name as the user. We then connect as each user to apply the matching permissions, for example with debora:
 
 ```bash
 cd /home/admin/shared/
@@ -142,7 +142,7 @@ ls -l
 -rw-rw-r-- 1 debora debora 30 Feb  2  2025 project_debora
 ```
 
-Sauf qu'il faut répèter le process pour chaque user, un peu fastidieux et pas dans une bonne approche. On va passer par un groupe partagé :
+But repeating the process for each user is tedious and not a clean approach. Let's create a shared group instead:
 
 ```bash
 # 1. Créer un groupe commun pour tous les utilisateurs
@@ -158,13 +158,13 @@ sudo chown :projectusers /shared/project_ALL
 sudo chmod 664 /shared/project_ALL        # rw pour owner+group
 ```
 
-Pour permettre à tous les users d'ajouter du contenu à `/home/admin/shared/project_ALL`, il faut un accès lecture/écriture pour tout le monde → 666 :&#x20;
+To let all users add content to `/home/admin/shared/project_ALL`, read/write access is needed for everyone → 666:&#x20;
 
 ```bash
 -rw-rw-rw- 1 root   admin  38 Feb  2  2025 ALL
 ```
 
-Et enfin, `chattr +a` (« append ») pour ne permettre que l'ajout de contenu dans `ALL`, sans pouvoir modifier ce qui existe déjà, et donc la première ligne :
+And finally, `chattr +a` ("append") so that `ALL` can only have content appended, without being able to modify what already exists, and therefore the first line:
 
 ```bash
 lsattr *
@@ -177,7 +177,7 @@ lsattr *
 
 ## <mark style="color:$warning;">Fukuoka</mark>
 
-**Objectif :** un serveur nginx renvoie une 404 par défaut au lieu de servir un fichier avec le message _"Welcome to the Real Site!"_.
+**Goal:** an nginx server returns a default 404 instead of serving a file with the message _"Welcome to the Real Site!"_.
 
 ```html
 curl localhost
@@ -190,7 +190,7 @@ curl localhost
 </html>
 ```
 
-Un rapide coup d'œil dans la conf nginx nous indique où chercher les logs :
+A quick look at the nginx config tells us where the logs are:
 
 ```bash
 cat /etc/nginx/nginx.conf
@@ -200,14 +200,14 @@ cat /etc/nginx/nginx.conf
 }
 ```
 
-Boom, une erreur sur `/var/www/html`, le répertoire qui sert les fichiers :
+There it is, an error on `/var/www/html`, the directory that serves the files:
 
 ```bash
 cat /var/log/nginx/error.log
 2026/03/06 21:04:42 [crit] 618#618: *1 stat() "/var/www/html/" failed (13: Permission denied), client: 127.0.0.1, server: _, request: "GET / HTTP/1.1", host: "localhost"
 ```
 
-En vérifiant, on n'a effectivement pas les droits, et le répertoire a l'air cassé :
+Checking, we indeed don't have the rights, and the directory looks broken:
 
 ```bash
 ll /var/www/html
@@ -217,7 +217,7 @@ total 0
 d????????? ? ? ? ?            ? html
 ```
 
-`/var/www/html` est censé appartenir au groupe `www-data`, utilisé par nginx pour servir ses fichiers. On corrige :
+`/var/www/html` is supposed to belong to the `www-data` group, used by nginx to serve its files. We fix it:
 
 ```bash
 sudo chown -R www-data:www-data www/
@@ -229,14 +229,14 @@ ll
 drwxr-xr-x  3 www-data www-data 4096 Jul 21  2025 www
 ```
 
-Reload + restart du service :
+Reload + restart the service:
 
 ```bash
 sudo systemctl reload nginx
 sudo systemctl restart nginx
 ```
 
-Mais nginx ne veut toujours pas, sacré nginx. On se prend maintenant un 403 à la place d'un 404, donc toujours une erreur d'accès, mais sur le fichier html principal cette fois :
+But nginx still won't cooperate. We now get a 403 instead of a 404, so still an access error, but on the main HTML file this time:
 
 ```bash
 curl localhost
@@ -249,7 +249,7 @@ curl localhost
 </html>
 ```
 
-Quand on regarde de plus près, le lien symbolique `index.html` pointe vers un fichier qui n'a pas les bonnes permissions :
+Looking closer, the `index.html` symlink points to a file that doesn't have the right permissions:
 
 ```bash
 ll
@@ -260,14 +260,14 @@ ll /opt/site-content/real_index.html
 -rw-r----- 1 root root 34 Jul 21  2025 /opt/site-content/real_index.html
 ```
 
-On le voit d'ailleurs dans les logs :
+We can see it in the logs too:
 
 ```bash
 cat /var/log/nginx/error.log
 2026/03/06 21:12:25 [error] 928#928: *1 open() "/var/www/html/index.html" failed (13: Permission denied), client: 127.0.0.1, server: _, request: "GET / HTTP/1.1", host: "localhost"
 ```
 
-On corrige donc tout ça avec les bonnes permissions du fichier cible :
+So we fix the target file's permissions:
 
 ```bash
 sudo chown root:www-data /opt/site-content/real_index.html
@@ -279,9 +279,9 @@ ll /opt/site-content/real_index.html
 -rw-r----- 1 root www-data 34 Jul 21 2025 /opt/site-content/real_index.html
 ```
 
-nginx (`www-data`) ne doit que _lire_ le fichier. Seul `root` peut l'éditer, `www-data` y accède en lecture via le groupe.
+nginx (`www-data`) only needs to _read_ the file. Only `root` can edit it; `www-data` accesses it read-only through the group.
 
-Et pour finir :
+And finally:
 
 ```bash
 curl localhost

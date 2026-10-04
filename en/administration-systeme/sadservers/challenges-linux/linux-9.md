@@ -1,230 +1,220 @@
-# 9 - Budapest, Tukaani, Tokelau, Hanoi & Kampala
+# 4 - Oaxaca, Melbourne & Lisbon
 
-### <mark style="color:$warning;">Budapest</mark>
+### <mark style="color:$warning;">Oaxaca</mark>
 
-**L'objectif est ici tout simple :** créer un compte pour chaque user listé dans `user_list.txt` (format `user;password`), avec le mot de passe correspondant.
+**Goal:** close a file opened by a process, without killing that process.
 
-```bash
-cat user_list.txt
-# alexsmith;Yt7kE9wq
-# emilyjones;Fg3vU1pz
-# ...
-```
+Straight to a search: _"close a file without killing its process"_, which leads to [this superuser thread](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
 
-Là pour le coup l'IA nous aide grandement. N'importe laquelle peut pour parcourir le fichier et créer/mettre à jour chaque compte :
+We look at the open file and the process holding it:
 
 ```bash
-#!/bin/bash
-INPUT="user_list.txt"
+ll /home/admin/somefile
+# -rw-r--r-- 1 admin admin 0 Mar 12 16:16 /home/admin/somefile
 
-while IFS=';' read -r user pass; do
-    [ -z "$user" ] && continue
-    echo "Création de l'utilisateur $user"
-
-    if id "$user" >/dev/null 2>&1; then
-        echo "  -> $user existe déjà, mise à jour du mot de passe"
-    else
-        useradd -m "$user"
-    fi
-
-    echo "${user}:${pass}" | chpasswd
-done < "$INPUT"
+lsof /home/admin/somefile
+# COMMAND  PID  USER   FD   TYPE DEVICE SIZE/OFF   NODE NAME
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-### <mark style="color:$warning;">Tukaani</mark>
+The file is open by `bash` (PID 1037) on descriptor `77w` (write).
 
-**Contexte de chall de la backdoor XZ Utils (CVE-2024-3094)**, découverte en mars 2024. L'un des incidents de supply-chain les plus sérieux de ces dernières années dans l'écosystème Linux **:** un service `jobapp` charge une version malveillante d'une librairie système (`liblzma.so.5`) via une variable d'environnement, à la place de la vraie librairie.
-
-Rappel utile avant de creuser : une librairie statique est intégrée à la compilation, une librairie partagée/dynamique est chargée au runtime par le _dynamic linker/loader_ (`ld.so`). C'est ce chargement dynamique qui peut être détourné.
-
-La bonne version de la librairie, présente sur le système est ici :
+We can see it with `lsof -p`:
 
 ```bash
-ll /usr/lib/x86_64-linux-gnu/liblzma.so.5
-# lrwxrwxrwx 1 root root 16 Apr 11 2022 liblzma.so.5 -> liblzma.so.5.2.5
+lsof -p 1037
+# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-Ici, deux services web tournent sur la machine (`jobapp.service`, `webapp.service`). On inspecte leurs unités systemd :
+If we close it:
 
 ```bash
-cat /etc/systemd/system/multi-user.target.wants/webapp.service
-[Service]
-ExecStart = /opt/webapp/webapp.py
-Environment="LD_LIBRARY_PATH=/opt/.trash/"
+exec 77w>&-
+# -bash: exec: 77w: not found
 ```
+
+Syntax error: the `w` isn't part of the descriptor number, it's just an indicator in the `lsof` output. This is better:
 
 ```bash
-cat /etc/systemd/system/multi-user.target.wants/jobapp.service
-[Service]
-ExecStart = /opt/job-app/jobapp.py
-EnvironmentFile=/opt/.trash/.jobapp.env
+exec 77>&-
+lsof -p 1037
+# (plus rien listé sur ce fichier)
 ```
 
-Les deux pointent vers un dossier suspect, `/opt/.trash/` ça sent déjà le mauvais signe.
+The descriptor is closed, with the bash process still alive. Simpler than expected in the end.
+
+### <mark style="color:$warning;">Melbourne</mark>
+
+**Context:** a Python WSGI app (`/home/admin/wsgi.py`) is supposed to output "**Hello, world!**", behind Gunicorn, itself behind nginx. The expected chain: `curl → nginx → Gunicorn → wsgi.py`. Goal: have `curl localhost` return "Hello, world!".
+
+Nginx is off, we turn it back on:
 
 ```bash
-sudo ls /opt/.trash/
-# liblzma.so.5
+sudo systemctl status nginx
+# Active: inactive (dead)
+sudo systemctl start nginx
+sudo systemctl status nginx
+# Active: active (running)
 ```
 
-Une deuxième copie de la librairie existe dans ce dossier, en dehors de l'emplacement système standard. On va quand même rechercher partout, et on tombe sur le mauvais éléments :
+Config tested, syntax OK:
 
 ```bash
-sudo find / -name "liblzma*" 2>/dev/null
-# /usr/lib/x86_64-linux-gnu/liblzma.so.5      <- la vraie
-# /opt/.trash/liblzma.so.5                     <- la suspecte
+sudo nginx -t
+# syntax ok, test successful
 ```
 
-Cette dernière est d'ailleurs référencé dans le fichier `/opt/.trash/.jobapp.env` :
+But still not working. It used to work but not anymore :P :
 
 ```bash
-cat /opt/.trash/.jobapp.env
-APP_CONFIG_DB_NAME="jobapp"
-APP_CONFIG_USER="dev"
-LD_PRELOAD="/opt/.trash/liblzma.so.5"
-DB_CONFIG_PRELOAD="true"
+curl http://localhost
+# 502 Bad Gateway
 ```
 
-`LD_PRELOAD` force le chargement de la librairie malveillante avant toute autre.&#x20;
+Let's look at the wsgi file in question:
 
-On va donc la supprimer via systemctl :
+```python
+def application(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/html'), ('Content-Length', '0'), ])
+    return [b'Hello, world!']
+```
+
+If we try to launch it in the background:
 
 ```bash
-sudo systemctl edit webapp
-# [Service]
-# Environment=
-sudo systemctl daemon-reload
+gunicorn wsgi:application --daemon
 ```
 
-Puis on supprime le fichier de librairie et remplace par un lien vers la vraie version système, en gardant par contre le nom originale pour pas casser une app/service. Ainsi même si un service référence encore ce chemin, il pointe désormais vers la librairie légitime.
+We get a 502. What do the holy nginx logs say?
 
 ```bash
-# Suppression du fichier malveillant (optionnel)
-sudo rm /opt/.trash/liblzma.so.5
-
-# Lien symbolique vers la bonne librairie
-sudo ln -s /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.5 /opt/.trash/liblzma.so.5
+cat /var/log/nginx/error.log
+# connect() to unix:/run/gunicorn.socket failed (2: No such file or directory)
 ```
 
-### <mark style="color:$warning;">Tokelau</mark>
-
-**Objectif :** vider les lignes de l'historiques contenant "foo", sans que la session courante ne les fasse réapparaître.
-
-Ce chall m'a permis de voir un truc : `history -r` ne **remplace pas** l'historique de la session en cours, il **ajoute** le contenu du fichier de l'historique bash à la liste déjà chargée en mémoire. Du coup, supprimer une ligne du fichier `.bash_history` avec `sed` ne suffit pas si l'historique en mémoire de la session contient encore des commandes.
-
-La solution pour pallier à cela tiens en une ligne :
+So nginx is trying to reach a socket that doesn't exist. BUT, looking at Gunicorn's status, it was stopped:
 
 ```bash
-sed -i '/foo/d' ~/.bash_history && history -c && history -r
+sudo systemctl status gunicorn
+# Active: inactive (dead)
+sudo systemctl start gunicorn
+sudo systemctl status gunicorn
+# Active: active (running)
 ```
 
-* `sed -i '/foo/d' ~/.bash_history` : supprime les lignes contenant "foo" du fichier.
-* `history -c` : vide l'historique de la session courante en mémoire.
-* `history -r` : recharge l'historique depuis le fichier bash\_history.
-
-### <mark style="color:$warning;">Hanoi</mark>
-
-**Objectif :** croiser deux fichiers — `users.txt` (liste d'utilisateurs) et `groups.txt` (format `group_name:user1,user2,user3`) — pour lister les utilisateurs appartenant à plus d'un groupe, triés alphabétiquement.
-
-Prompt envoyé à Perplexity pour générer le script :
-
-> _Génère une commande bash triant les utilisateurs de users.txt appartenant à plus d'1 groupe dans groups.txt, triés alphabétiquement, un nom par ligne._
-
-Script obtenu :
+Still a 502 though. I lean toward the phantom socket theory, but looking closer:
 
 ```bash
-#!/bin/bash
-
-# Charge users.txt dans un tableau associatif pour lookup rapide
-declare -A valid_users
-while IFS= read -r user; do
-    [[ -n "$user" ]] && valid_users["$user"]=1
-done < users.txt
-
-# Compte les appartenances aux groupes pour chaque utilisateur valide
-declare -A user_counts
-while IFS=: read -r group users_list; do
-    [[ -z "$group" || -z "$users_list" ]] && continue
-    IFS=',' read -ra user_array <<< "$users_list"
-    for user in "${user_array[@]}"; do
-        [[ -n "$user" && ${valid_users[$user]+isset} ]] || continue
-        ((user_counts[$user]++))
-    done
-done < groups.txt
-
-# Sortie triée des utilisateurs avec plus d'1 groupe
-for user in "${!user_counts[@]}"; do
-    [[ ${user_counts[$user]} -gt 1 ]] && echo "$user"
-done | sort > /home/admin/multi-group-users.txt
+ls -la /run/gunicorn.socket
+# ls: cannot access '/run/gunicorn.socket': No such file or directory
+ll /run/gunicorn.sock
+# srw-rw-rw- 1 root root 0 Mar 12 18:17 /run/gunicorn.sock
 ```
 
-Fonctionne du premier coup.
+The real socket is actually named `gunicorn.sock` (without the final "**et**"), not `gunicorn.socket`. This typo is visible in the nginx config:
 
-### <mark style="color:$warning;">Kampala</mark>
+```nginx
+server {
+    listen 80;
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.socket;  # --> à corriger en "gunicorn.sock"
+    }
+}
+```
 
-**Contexte :** le serveurs contient des scripts de déploiement qui refusent de s'exécuter
-
-Premiers checks, rien d'anormal
+We fix it, then restart the services involved. And there:
 
 ```bash
-ll deploy/
-# -rwxr-xr-x 1 admin admin 293 Sep 29 14:07 deploy.sh
+curl -I http://localhost
+# HTTP/1.1 200 OK
+# Content-Length: 0
 ```
 
-Les permissions sont correctes, tout comme le contenu contenu du script deploy.sh :
+The headers go through, but Content-Length is 0, so nothing in the response.
+
+In **wsgi.py** itself, the file hardcodes `Content-Length: 0` while it actually returns `b'Hello, world!'`, hence the mismatch between the announced header and the real body. I still asked an AI to review the code, which gives in the end:
+
+```python
+def application(environ, start_response):
+    status = '200 OK'
+    output = b'Hello, world!'
+    headers = [('Content-Type', 'text/html'), ('Content-Length', str(len(output)))]
+    start_response(status, headers)
+    return [output]
+```
+
+One of the changes it made sets `Content-Length` to be computed dynamically from the returned content. We hit it locally:
 
 ```bash
-cat deploy.sh
-#!/bin/bash
-echo "Starting deployment process..."
-# ...
+curl http://localhost
+# Hello, world!
 ```
 
-Au cas où, on fait une copie si on aura besoin de modifier des trucs par précaution. Puis on change les perms et test en lançant pour voir :
+### <mark style="color:$warning;">Lisbon</mark>
+
+**Context:** an etcd server with, apparently, an SSL certificate problem.
 
 ```bash
-chmod 755 deploy_2.sh
-./deploy_2.sh
-# -bash: ./deploy_2.sh: cannot execute: required file not found
-sudo ./deploy_2.sh
-# sudo: unable to execute ./deploy_2.sh: No such file or directory
+ps faux | grep etcd
+# /usr/bin/etcd --cert-file /etc/ssl/certs/localhost.crt --key-file /etc/ssl/certs/localhost.key --advertise-client-urls=https://localhost:2379 --listen-client-urls=https://localhost:2379
 ```
 
-Le "./" placé avant un fichier pour lance un script direct avec le shell par défaut ne passe pas. En le lançant directement avec `bash`, le vrai problème apparaît :
+I started from the idea that the SSL certificate needed renewing based on the system date. I went through several tutorials, all nginx / Let's Encrypt / certbot oriented, but nothing worked.
+
+Setting the system date back to an earlier one (January 1, 2023), the certificate error did disappear... but another one appeared instead:
 
 ```bash
-sudo bash deploy_2.sh
-# deploy_2.sh: line 2: $'\r': command not found
-# deploy_2.sh: line 14: syntax error: unexpected end of file
+sudo date -s 01/03/2023
+etcdctl get foo
+# Error: client: response is invalid json. The endpoint is probably not valid etcd cluster endpoint.
 ```
 
-Le script contient un caractère de retour chariot `$'\r'` invisible en fin de ligne, typique des fichiers édités/créés sous Windows (fins de ligne CRLF au lieu de LF Unix).
+So the certificate wasn't the root cause, just a symptom tied to the date, not the root cause.
 
-Une recherche Google sur le message d'erreur original (`cannot execute: required file not found`) qui confirme cette piste : c'est un classique des scripts avec fins de ligne Windows, l'interpréteur indiqué par le shebang (`#!/bin/bash\r`) n'est pas trouvé tel quel à cause du `\r` parasite.
-
-Pour convertir le fichier on va utiliser **dos2unix**. C'est un outil en ligne de commande qui convertit les fins de ligne des fichiers texte du format DOS/Windows (CRLF) vers le format Unix/Linux (LF). Il supprime les retours chariot superflus pour rendre les scripts et les fichiers compatibles avec les systèmes de type Unix :
+We test the etcd endpoints directly over HTTPS:
 
 ```bash
-dos2unix deploy_2.sh
-# converting file deploy_2.sh to Unix format...
+curl https://localhost:2379/v2/keys/foo
+# 404 Not Found (nginx)
+curl https://localhost:2379/v2/
+# 404 Not Found (nginx)
+curl https://localhost:2379/
+# Testing SSL
 ```
 
-On appliqué à tous les scripts du dossier par précaution :
+Still stuck on "Testing SSL...". Checking the nginx config: nothing wrong on the surface (listening on 443, syntactically valid config):
 
 ```bash
-dos2unix *
-# converting file backup.sh to Unix format...
-# converting file deploy.sh to Unix format...
-# converting file setup.sh to Unix format...
+sudo nginx -t
+# syntax ok, test successful
 ```
 
-Puis :
+On to the iptables rules, the NAT table in particular:
 
 ```bash
-./setup.sh
-# Setting up application environment...
-# mkdir: cannot create directory '/opt/app/logs': Permission denied
-# Environment setup completed!
+sudo iptables -t nat -L
 ```
 
-Le script s'exécute enfin (reste une erreur de permission distincte sur `/opt/app`, problème séparé car hors scope).
+```
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+REDIRECT   tcp  --  anywhere             anywhere             tcp dpt:2379 redir ports 443
+```
+
+Found it: **all** TCP traffic destined for port 2379 (etcd) is forwarded to port 443 by iptables. That rule was causing the nginx 404s instead of etcd responses.&#x20;
+
+We remove the redirect rules from the OUTPUT chain of the NAT table:
+
+```bash
+sudo iptables -t nat -F OUTPUT
+```
+
+Then check for anything new:
+
+```bash
+curl https://localhost:2379/v2/keys/foo
+# {"action":"get","node":{"key":"/foo","value":"bar","modifiedIndex":4,"createdIndex":4}}
+```
+
+Solved.

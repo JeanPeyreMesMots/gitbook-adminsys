@@ -2,11 +2,11 @@
 
 ### <mark style="color:$warning;">Oaxaca</mark>
 
-**Objectif :** fermer un fichier ouvert par un process, sans tuer ce process.
+**Goal:** close a file opened by a process, without killing that process.
 
-Direction Google direct : _"close a file without killing its process"_, qui mène à [ce thread superuser](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
+Straight to a search: _"close a file without killing its process"_, which leads to [this superuser thread](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
 
-On regarde le fichier ouvert et le process qui le tient :
+We look at the open file and the process holding it:
 
 ```bash
 ll /home/admin/somefile
@@ -17,23 +17,23 @@ lsof /home/admin/somefile
 # bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-Le fichier est ouvert par `bash` (PID 1037) sur le descripteur `77w` (écriture).
+The file is open by `bash` (PID 1037) on descriptor `77w` (write).
 
-On le voit avec `lsof -p` :
+We can see it with `lsof -p`:
 
 ```bash
 lsof -p 1037
 # bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
 ```
 
-Si on le ferme :
+If we close it:
 
 ```bash
 exec 77w>&-
 # -bash: exec: 77w: not found
 ```
 
-Erreur de syntaxe, le `w` ne fait pas partie du numéro de descripteur, c'est juste un indicatif dans la sortie de `lsof`. Comme ça c'est mieux :
+Syntax error: the `w` isn't part of the descriptor number, it's just an indicator in the `lsof` output. This is better:
 
 ```bash
 exec 77>&-
@@ -41,13 +41,13 @@ lsof -p 1037
 # (plus rien listé sur ce fichier)
 ```
 
-Le descripteur est fermé, avec le process bash toujours vivant. Plus simple que prévu au final.
+The descriptor is closed, with the bash process still alive. Simpler than expected in the end.
 
 ### <mark style="color:$warning;">Melbourne</mark>
 
-**Contexte :** une appli Python WSGI (`/home/admin/wsgi.py`) est censée sortir "**Hello, world!**", derrière Gunicorn, lui-même derrière nginx. Chaîne attendue : `curl → nginx → Gunicorn → wsgi.py`. Objectif : que `curl localhost` renvoie bien "Hello, world!".
+**Context:** a Python WSGI app (`/home/admin/wsgi.py`) is supposed to output "**Hello, world!**", behind Gunicorn, itself behind nginx. The expected chain: `curl → nginx → Gunicorn → wsgi.py`. Goal: have `curl localhost` return "Hello, world!".
 
-Nginx éteint, on le rallume :
+Nginx is off, we turn it back on:
 
 ```bash
 sudo systemctl status nginx
@@ -57,21 +57,21 @@ sudo systemctl status nginx
 # Active: active (running)
 ```
 
-Conf testée, syntaxe OK :
+Config tested, syntax OK:
 
 ```bash
 sudo nginx -t
 # syntax ok, test successful
 ```
 
-Mais toujours pas bon. Ça marchait avant mais plus maintenant :P :
+But still not working. It used to work but not anymore :P :
 
 ```bash
 curl http://localhost
 # 502 Bad Gateway
 ```
 
-Intéressons nous au fichier wsgi en question :
+Let's look at the wsgi file in question:
 
 ```python
 def application(environ, start_response):
@@ -79,20 +79,20 @@ def application(environ, start_response):
     return [b'Hello, world!']
 ```
 
-Si on essaye de le lancer en background :
+If we try to launch it in the background:
 
 ```bash
 gunicorn wsgi:application --daemon
 ```
 
-On se prend 502. Que disent les saints logs de nginx ?
+We get a 502. What do the holy nginx logs say?
 
 ```bash
 cat /var/log/nginx/error.log
 # connect() to unix:/run/gunicorn.socket failed (2: No such file or directory)
 ```
 
-Ich, nginx qui cherche à joindre un socket qui n'existe pas. SAUF QUE, en regardant le status de Gunicorn, il était arrêté :
+So nginx is trying to reach a socket that doesn't exist. BUT, looking at Gunicorn's status, it was stopped:
 
 ```bash
 sudo systemctl status gunicorn
@@ -102,7 +102,7 @@ sudo systemctl status gunicorn
 # Active: active (running)
 ```
 
-Toujours 502 pourtant. Je m'oriente vers la piste du socket fantôme, mais en regardant de plus près :
+Still a 502 though. I lean toward the phantom socket theory, but looking closer:
 
 ```bash
 ls -la /run/gunicorn.socket
@@ -111,7 +111,7 @@ ll /run/gunicorn.sock
 # srw-rw-rw- 1 root root 0 Mar 12 18:17 /run/gunicorn.sock
 ```
 
-En fait le socket réel s'appelle `gunicorn.sock` (sans le "**et**" final), pas `gunicorn.socket`. Cette coquille est visible dans la conf nginx :
+The real socket is actually named `gunicorn.sock` (without the final "**et**"), not `gunicorn.socket`. This typo is visible in the nginx config:
 
 ```nginx
 server {
@@ -123,7 +123,7 @@ server {
 }
 ```
 
-On corrige, puis on redémarre les services concernés. Et là :
+We fix it, then restart the services involved. And there:
 
 ```bash
 curl -I http://localhost
@@ -131,9 +131,9 @@ curl -I http://localhost
 # Content-Length: 0
 ```
 
-Les headers passent, mais content-length à 0, donc rien en réponse.
+The headers go through, but Content-Length is 0, so nothing in the response.
 
-Dans le **wsgi.py** lui-même le fichier déclare `Content-Length: 0` en dur alors qu'il retourne bien `b'Hello, world!'` d'où l'incohérence entre le header annoncé et le corps réel. J'ai quand même demandé à une IA de review le code, ce qui donne à la fin :
+In **wsgi.py** itself, the file hardcodes `Content-Length: 0` while it actually returns `b'Hello, world!'`, hence the mismatch between the announced header and the real body. I still asked an AI to review the code, which gives in the end:
 
 ```python
 def application(environ, start_response):
@@ -144,7 +144,7 @@ def application(environ, start_response):
     return [output]
 ```
 
-Un des changements appliqués dedans modifie `Content-Length` de façon à ce qu'il calcule dynamiquement la taille à partir du contenu retourné. On tape en locale :
+One of the changes it made sets `Content-Length` to be computed dynamically from the returned content. We hit it locally:
 
 ```bash
 curl http://localhost
@@ -153,16 +153,16 @@ curl http://localhost
 
 ### <mark style="color:$warning;">Lisbon</mark>
 
-**Contexte :** serveur etcd avec, en apparence, un problème de certificat SSL.
+**Context:** an etcd server with, apparently, an SSL certificate problem.
 
 ```bash
 ps faux | grep etcd
 # /usr/bin/etcd --cert-file /etc/ssl/certs/localhost.crt --key-file /etc/ssl/certs/localhost.key --advertise-client-urls=https://localhost:2379 --listen-client-urls=https://localhost:2379
 ```
 
-Je suis parti sur l'idée qu'il fallait renouveler le certificat SSL en fonction de la date système. J'ai enchaîné plusieurs tutos, tous orientés nginx / Let's Encrypt / certbot mais rien n'y faisait.
+I started from the idea that the SSL certificate needed renewing based on the system date. I went through several tutorials, all nginx / Let's Encrypt / certbot oriented, but nothing worked.
 
-En changeant la date système à une date antérieure (1er janvier 2023), l'erreur de certificat disparaissait bien... mais une autre est apparue à la place :
+Setting the system date back to an earlier one (January 1, 2023), the certificate error did disappear... but another one appeared instead:
 
 ```bash
 sudo date -s 01/03/2023
@@ -170,9 +170,9 @@ etcdctl get foo
 # Error: client: response is invalid json. The endpoint is probably not valid etcd cluster endpoint.
 ```
 
-Donc le certificat n'était pas la root cause, juste un symptôme lié à la date, pas la cause racine.
+So the certificate wasn't the root cause, just a symptom tied to the date, not the root cause.
 
-On test direct les endpoints etcd en HTTPS :
+We test the etcd endpoints directly over HTTPS:
 
 ```bash
 curl https://localhost:2379/v2/keys/foo
@@ -183,14 +183,14 @@ curl https://localhost:2379/
 # Testing SSL
 ```
 
-Toujours bloque en "Testing SSL...". Vérification de la conf nginx : rien d'anormal en apparence (écoute sur 443, config syntaxiquement valide) :
+Still stuck on "Testing SSL...". Checking the nginx config: nothing wrong on the surface (listening on 443, syntactically valid config):
 
 ```bash
 sudo nginx -t
 # syntax ok, test successful
 ```
 
-Direction les règles iptables, notamment la table NAT :
+On to the iptables rules, the NAT table in particular:
 
 ```bash
 sudo iptables -t nat -L
@@ -202,19 +202,19 @@ target     prot opt source               destination
 REDIRECT   tcp  --  anywhere             anywhere             tcp dpt:2379 redir ports 443
 ```
 
-Trouvé : **tout** le trafic TCP à destination du port 2379 (etcd) est forwardé vers le port 443 par iptables. C'est cette règle qui causait les 404 nginx à la place des réponses etcd.&#x20;
+Found it: **all** TCP traffic destined for port 2379 (etcd) is forwarded to port 443 by iptables. That rule was causing the nginx 404s instead of etcd responses.&#x20;
 
-On vire les règles de redirection sur la chaîne OUTPUT de la table NAT :
+We remove the redirect rules from the OUTPUT chain of the NAT table:
 
 ```bash
 sudo iptables -t nat -F OUTPUT
 ```
 
-Puis on regarde si on a du neuf :
+Then check for anything new:
 
 ```bash
 curl https://localhost:2379/v2/keys/foo
 # {"action":"get","node":{"key":"/foo","value":"bar","modifiedIndex":4,"createdIndex":4}}
 ```
 
-Résolu.
+Solved.

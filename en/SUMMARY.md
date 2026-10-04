@@ -43,11 +43,6 @@
   * [🌐 Challenges Web](administration-systeme/sadservers/challenges-web/README.md)
     * [1 - Geneva, Tokyo, Marseille, Paris](administration-systeme/sadservers/challenges-web/web-server.md)
 
-## 🧑‍🎓 Courses & Hands-on exercises
-
-* [🔐 Pentesting wp-mobile-detector plugin](cours-and-tp-m1-cyber/pentest-wp-mobile-detector.md)
-* [🔐 Patching a vulnerability](cours-and-tp-m1-cyber/correction-dune-vulnerabilite.md)
-
 ## 💡 WriteUps
 
 * [📕 TryHackMe](ctfs-writeups/tryhackme/README.md)

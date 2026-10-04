@@ -4,11 +4,11 @@ description: Setting up the server
 
 # 1 - Installation and configuration
 
-First, we install Windows Server 2019 locally on my machine. I chose VMware as the hypervisor, as I find it easier to create separate subnets and more efficient at managing resources 🙂
+First, I install Windows Server 2019 locally on my machine. I chose VMware as the hypervisor: I find it makes creating separate subnets easier, and it handles resources more efficiently 🙂
 
 We start by downloading the Windows Server 2019 ISO: [https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019](https://www.microsoft.com/en-us/evalcenter/download-windows-server-2019)
 
-Then we install it in a new VM:
+Then we install it in a new virtual machine:
 
 <figure><img src="../../../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
@@ -16,17 +16,17 @@ Once VMware Tools is installed and fullscreen works, we now have our Windows Ser
 
 <figure><img src="../../../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
 
-Renaming the server to "**mesmots**", with the description "Serveur AD MesMots":
+We rename the server to "**mesmots**", with the description "Serveur AD MesMots":
 
 <figure><img src="../../../.gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
 
 ### Creating the domain:
 
-Before creating the Active Directory domain we must install the "**ADDS**" role, called **Active Directory Domain Services** that will allows us to create an Active Directory domain:
+The first step, before creating the Active Directory domain, is to install the "**ADDS**" role: **Active Directory Domain Services**. This role is what makes it possible to create an Active Directory domain:
 
 <figure><img src="../../../.gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
 
-We then promote the server to be a DC, with the following name "**mesmots.local**":
+We then promote the server to a DC, with the domain name "**mesmots.local**":
 
 <figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
 
@@ -38,7 +38,7 @@ Once the domain is created, we can start creating the requested OUs, with the fo
 
 <figure><img src="../../../.gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
 
-At the end we get our OUs containing all the members, assigned to each group:
+We end up with the following OUs, each containing the members of its group:
 
 ```rust
 mesmots.local
@@ -52,7 +52,7 @@ mesmots.local
     └── OU Ordinateurs
 ```
 
-This gives us the following complete tree, with each user belonging to a group named "**GRP\_CODIR**", "**GRP\_ADMIN**" and so on:
+Here is the complete tree, with each user belonging to a group named "**GRP\_CODIR**", "**GRP\_ADMIN**"... depending on the name of the OU:
 
 ```rust
 mesmots.local
@@ -104,15 +104,17 @@ mesmots.local
 
 ### Creating the shared disk
 
-While trying to create the folder hierarchy on the server's "**D:**" drive, I realized it did not exist on the server. Therefore I had to create a dedicated partition, using a virtual hard disk. So I created a virtual hard disk in "**.vmdk**" format on VMware, named "**partage\_commun.vmdk**":
+When I tried to create the folder hierarchy on the "**D:**" drive, I realized the server didn't have one. So I had to add a dedicated partition on a new virtual hard disk.
+
+I created a "**.vmdk**" virtual disk in VMware, named "**partage\_commun.vmdk**":
 
 <figure><img src="../../../.gitbook/assets/image (73).png" alt=""><figcaption></figcaption></figure>
 
-Once the disk is created, we open "**diskmgmt.msc**" on the AD server and the disk shows up:
+Once the disk is created, we open "**diskmgmt.msc**" on the AD server, and the disk shows up:
 
 <figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-The disk is then mounted as **D:/**. We create a folder named "**Partages**" on it, and then we can create the folders with their trees matching the OUs. Here is the directory listing:
+The disk is then mounted as **D:/**. We create a folder named "**Partages**" on it, then build a folder structure mirroring the OUs. Here is the directory listing:
 
 ```powershell
 PS C:\Users\Administrateur> cd D:\Partages
@@ -141,14 +143,14 @@ Mode                LastWriteTime         Length Name
 d-----       15/04/2026     20:20                Profs
 ```
 
-The lab mentions **X:**, **P:**, etc. as drives mapped on the clients. Based on this model, I chose the following letters for each drive:
+The lab refers to **X:**, **P:**, etc. as drives mapped on the clients. Following that model, I assigned the following letters:
 
 * **X:** = SMB share pointing to "**D:\Partages**" (root)
 * **P:** = SMB share pointing to "**D:\Users{Username}**"
 
 ### Creating the share:
 
-We can first see the role is already present on the AD server:
+First, we can see that the File Server role is already installed on the DC:
 
 <figure><img src="../../../.gitbook/assets/image (74).png" alt=""><figcaption></figcaption></figure>
 
@@ -164,7 +166,7 @@ _Note: permissions were left at their defaults, as they will be changed later us
 
 ### Defining the share permissions:
 
-The lab provided a table of permissions to apply to the share, for each group, defining who has access to what. Here are extracts:
+The lab came with a permissions matrix defining who can access what, for each group. Here are some extracts:
 
 <figure><img src="../../../.gitbook/assets/image (78).png" alt=""><figcaption></figcaption></figure>
 
@@ -180,7 +182,7 @@ First, I create a global group "**GG\_GRP\_ALL\_USERS**" that contains all the o
 
 <figure><img src="../../../.gitbook/assets/image (81).png" alt=""><figcaption></figcaption></figure>
 
-Then we grant this group read access on the "**D:/Partages**" folder created earlier. This gives us effective SMB access, which will then be refined with NTFS permissions:
+Then we grant this group read access on the "**D:/Partages**" folder created earlier. This grants effective SMB access, which is then refined with NTFS permissions:
 
 <figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
@@ -194,7 +196,7 @@ Then we can apply the NTFS permissions by adding each desired group and ticking 
 
 <figure><img src="../../../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
-And we properly set each required permission for each group on each folder :) This gives the following PowerShell listing of the permissions of each folder:
+We then set the required permissions for each group on each folder. Here is the resulting PowerShell listing ;) :
 
 ```ps1
 # Dossier : ADMINISTRATIF
@@ -233,23 +235,23 @@ GG_GRP_IT              Modify                       False
 GG_GRP_PROFS           Modify                 
 ```
 
-Each group has exactly the permissions it needs to access its folder, as defined in the permissions table before.
+Each group now has exactly the permissions it needs on each folder, at a granular level, matching the permissions matrix.
 
 ### Configuring the Windows 11 client VM and the network
 
-Now that both server and share are set up, we can create a Windows 11 VM on the same local network to simulate a client workstation.
+Now that the server and the share are in place, we can create a Windows 11 VM on the same local network to simulate a client workstation.
 
 _Note: to be able to join the AD domain, it is essential to choose the "Pro" edition._
 
-Once the VM is installed, I debloat it Windows with [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) to free up resources and get a lighter system:
+Once the VM is installed, I debloat Windows using [Sophia Script](https://github.com/farag2/Sophia-Script-for-Windows) to free up resources on my machine and get a lighter system:
 
 <figure><img src="../../../.gitbook/assets/image (82).png" alt=""><figcaption></figcaption></figure>
 
-We then set the AD server's address, **192.168.1.100**, as the DNS server, which is required to communicate properly with it:
+We then set the AD server's address, **192.168.1.100**, as the DNS server, which is required for the client to communicate with the domain:
 
 <figure><img src="../../../.gitbook/assets/image (98).png" alt=""><figcaption></figcaption></figure>
 
-Next, we configure a virtual network _**vmnet1**_ in VMware to set up a bridged connection between the Active Directory server and the Windows 11 VM, who will get a DHCP range from **192.168.1.100 to 192.168.1.254**:
+Next, we configure a virtual network _**vmnet1**_ in VMware to set up a bridged connection between the Active Directory server and a Windows 11 VM, with a DHCP range from **192.168.1.100 to 192.168.1.254**:
 
 <figure><img src="../../../.gitbook/assets/image (83).png" alt=""><figcaption></figcaption></figure>
 
@@ -257,32 +259,32 @@ Then we install the DHCP server, following this guide (in French):
 
 [https://www.it-connect.fr/installer-et-configurer-un-serveur-dhcp-sous-windows-server-2019/](https://www.it-connect.fr/installer-et-configurer-un-serveur-dhcp-sous-windows-server-2019/)
 
-We then notice that 2 users have been created in the group:
+We can then see that 2 users have been added to the group:
 
 <figure><img src="../../../.gitbook/assets/image (88).png" alt=""><figcaption></figcaption></figure>
 
-We then create a DHCP pool. In this example, the AD server get the IP "**192.168.1.100**", also configured statically on it. We will create a scope that distributes IP addresses from **192.168.1.100** to **124**, i.e. 24 IPv4 addresses, which is the number of employees of the fictional company ;)
+We then create a DHCP pool. In this example, the AD server has the IP address "**192.168.1.100**", configured statically. We will create a scope that distributes IP addresses from **192.168.1.100** to **124**, i.e. 24 IPv4 addresses, which is the number of employees of the fictional company!
 
-We give it a name, here "**LAN\_MesMots**":
+We name it "**LAN\_MesMots**":
 
 <figure><img src="../../../.gitbook/assets/image (90).png" alt=""><figcaption></figcaption></figure>
 
-Then set the DHCP lease to 8 days, which is realistic for a corporate network:
+We then set the DHCP lease to 8 days, which is realistic for a corporate network:
 
 <figure><img src="../../../.gitbook/assets/image (92).png" alt=""><figcaption></figcaption></figure>
 
-An we can confirm the operation worked by looking at the logs on the server: "**C:\Windows\System32\dhcp**"
+We can confirm it worked by checking the DHCP logs on the server, in "**C:\Windows\System32\dhcp**":
 
 ```powershell
 55,04/26/26,16:53:39,Autorisé (en service),,mesmots.local,,,0,6,,,,,,,,,0
 10,04/26/26,17:17:52,Assigner,192.168.1.101,WIN11-HOME-LAB.mesmots.local,000C29A1D0A3,,4172766725,0,,,,0x4D53465420352E30,MSFT 5.0,,,,0
 ```
 
-Since we might as well go all the way, we can also lock the IP for the Windows 11 PC with a new reservation:
+To go all the way, we can also reserve the IP of the Windows 11 PC:
 
 <figure><img src="../../../.gitbook/assets/image (95).png" alt=""><figcaption></figcaption></figure>
 
-We can see that our **WIN-11** machine does get an IP + the FQDN of the associated server:
+Our **WIN-11** machine does get an IP address and the domain's DNS suffix:
 
 ```powershell
 PS C:\WINDOWS\system32> ipconfig /all
@@ -305,7 +307,7 @@ Carte Ethernet Ethernet0 :
    NetBIOS sur Tcpip. . . . . . . . . . . : Activé
 ```
 
-Both machines can reach each other, and the domain responds properly on 192.168.1.100.
+Both machines can reach each other, and the domain answers on 192.168.1.100:
 
 ```powershell
 PS C:\> ping mesmots.local
@@ -341,4 +343,4 @@ Indicateurs : PDC GC DS LDAP KDC TIMESERV ...
 La commande a été correctement exécutée.
 ```
 
-Our DC is therefore properly detected and reachable! ✅
+Our DC is detected and reachable! ✅

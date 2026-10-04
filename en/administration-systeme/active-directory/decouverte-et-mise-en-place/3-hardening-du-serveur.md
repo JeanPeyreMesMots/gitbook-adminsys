@@ -1,6 +1,6 @@
 # 3 - Hardening the server
 
-Since I'm into cybersecurity, I wanted to assess how secure my freshly deployed AD, as AD remains a critical point in infrastructure, using PingCastle. A first scan of the domain gives a poor score:
+Since I'm into cybersecurity, I wanted to assess how secure my freshly deployed AD was, using PingCastle. A first scan of the domain gives a poor score:
 
 <figure><img src="../../../.gitbook/assets/image (117).png" alt=""><figcaption></figcaption></figure>
 
@@ -109,7 +109,7 @@ Set-Service Spooler -StartupType Disabled
 
 ### Configuring LAPS
 
-LAPS manages the local admin passwords of domain-joined machines: Windows LAPS **generates a strong, unique password for the local administrator account of each machine it manages**, while **automatically rotating these passwords**. The passwords are then encrypted and stored in Active Directory or Entra ID, depending on the configuration.
+LAPS manages the local admin passwords of domain-joined machines: Windows LAPS **generates a strong, unique password for the local administrator account of each machine it manages**, while **automatically rotating these passwords**. The passwords are then encrypted and stored in Active Directory or Azure Active Directory, depending on the configuration.
 
 On the DC, the following PowerShell command allows computers in the OU to write their own LAPS password attributes:
 
@@ -167,11 +167,11 @@ We can now run a program as admin on the client PC, entering in the UAC prompt:
 
 <figure><img src="../../../.gitbook/assets/image (131).png" alt=""><figcaption></figcaption></figure>
 
-We get an elevated shell in "**System32**", so the LAPS-managed admin account works :
+We get an elevated shell in "**System32**", so the LAPS-managed admin account works!
 
 <figure><img src="../../../.gitbook/assets/image (132).png" alt=""><figcaption></figcaption></figure>
 
-And the PingCastle score drops again !
+And the PingCastle score drops again:
 
 <figure><img src="../../../.gitbook/assets/image (133).png" alt=""><figcaption></figcaption></figure>
 
@@ -185,12 +185,12 @@ can connect directly to the Internet to exfiltrate data or download payloads. By
 
 **Solution via GPO**:
 
-* I choose to edit a GPO linked to the DCs and workstations (`Computer > Configuration > Windows Settings > Windows Firewall with Advanced Security`), which I named "**Sécurité - Bloquer moteur de scripts /= internet**":
+* Edit a GPO linked to the DCs and workstations (`Computer > Configuration > Windows Settings > Windows Firewall with Advanced Security`), which I named "**Sécurité - Bloquer moteur de scripts /= internet**":
 
 <figure><img src="../../../.gitbook/assets/image (134).png" alt=""><figcaption></figcaption></figure>
 
 ```
-Programme : %SystemRoot%\System32\wscript.exe (and others)
+Programme : %SystemRoot%\System32\wscript.exe (et les autres)
 ```
 
 Action:
@@ -219,7 +219,7 @@ With these two rules, Stale Objects went from 31 to **11/100** (S-OldNtlm fixed 
 
 <figure><img src="../../../.gitbook/assets/image (137).png" alt=""><figcaption></figcaption></figure>
 
-PingCastle still flags this anyway:
+PingCastle still flags this:
 
 <figure><img src="../../../.gitbook/assets/image (138).png" alt=""><figcaption></figcaption></figure>
 

@@ -1,220 +1,191 @@
-# 4 - Oaxaca, Melbourne & Lisbon
+# 5 - Kihei
 
-### <mark style="color:$warning;">Oaxaca</mark>
+**Goal:** make `/home/admin/kihei` work without deleting `/home/admin/datafile`. The success test: running the program must return `Done.`.
 
-**Goal:** close a file opened by a process, without killing that process.
-
-Straight to a search: _"close a file without killing its process"_, which leads to [this superuser thread](https://superuser.com/questions/963612/closing-open-file-without-killing-the-process).
-
-We look at the open file and the process holding it:
+Starting point, with [this guide](https://blog.stephane-robert.info/docs/admin-serveurs/linux/gestion-espace-disque/) as support:
 
 ```bash
-ll /home/admin/somefile
-# -rw-r--r-- 1 admin admin 0 Mar 12 16:16 /home/admin/somefile
-
-lsof /home/admin/somefile
-# COMMAND  PID  USER   FD   TYPE DEVICE SIZE/OFF   NODE NAME
-# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
+df -hT -x tmpfs -x devtmpfs
+# /dev/nvme0n1p1  ext4  7.7G  6.8G  486M  94% /
 ```
 
-The file is open by `bash` (PID 1037) on descriptor `77w` (write).
-
-We can see it with `lsof -p`:
+The main disk is at 94% usage; we look at what's taking the most space:
 
 ```bash
-lsof -p 1037
-# bash    1037 admin   77w   REG  259,1        0 272875 /home/admin/somefile
+du -h --max-depth=1 /chemin | sort -h
 ```
 
-If we close it:
+```
+428M	/var
+1.3G	/usr
+5.1G	/home
+6.8G	/
+```
+
+`/home` is mostly taken up by `datafile` itself (the file we must not touch), so the cleanup has to happen in `/var` and `/usr`.
 
 ```bash
-exec 77w>&-
-# -bash: exec: 77w: not found
+du -h --max-depth=1 /var/cache/ | sort -h
+# 231M  /var/cache/apt
 ```
 
-Syntax error: the `w` isn't part of the descriptor number, it's just an indicator in the `lsof` output. This is better:
+The apt cache is the big chunk; we clear it:
 
 ```bash
-exec 77>&-
-lsof -p 1037
-# (plus rien listé sur ce fichier)
+sudo apt clean --dry-run
+# Del /var/cache/apt/archives/* /var/cache/apt/archives/partial/*
+# Del /var/lib/apt/lists/partial/*
+# Del /var/cache/apt/pkgcache.bin /var/cache/apt/srcpkgcache.bin
+sudo apt clean
 ```
 
-The descriptor is closed, with the bash process still alive. Simpler than expected in the end.
-
-### <mark style="color:$warning;">Melbourne</mark>
-
-**Context:** a Python WSGI app (`/home/admin/wsgi.py`) is supposed to output "**Hello, world!**", behind Gunicorn, itself behind nginx. The expected chain: `curl → nginx → Gunicorn → wsgi.py`. Goal: have `curl localhost` return "Hello, world!".
-
-Nginx is off, we turn it back on:
+Result: `/var/cache` goes from 234M to 3.5M. Then we clean `/var/lib` and the `apt/lists` inside it:
 
 ```bash
-sudo systemctl status nginx
-# Active: inactive (dead)
-sudo systemctl start nginx
-sudo systemctl status nginx
-# Active: active (running)
+130M	/var/lib/apt
 ```
-
-Config tested, syntax OK:
 
 ```bash
-sudo nginx -t
-# syntax ok, test successful
+sudo rm -rf /var/lib/apt/lists/*
 ```
 
-But still not working. It used to work but not anymore :P :
+`/var/lib/apt` then goes from 130M to 36K.
+
+Same for journal logs older than 7 days:
 
 ```bash
-curl http://localhost
-# 502 Bad Gateway
+49M	/var/log/journal
 ```
-
-Let's look at the wsgi file in question:
-
-```python
-def application(environ, start_response):
-    start_response('200 OK', [('Content-Type', 'text/html'), ('Content-Length', '0'), ])
-    return [b'Hello, world!']
-```
-
-If we try to launch it in the background:
 
 ```bash
-gunicorn wsgi:application --daemon
+sudo journalctl --vacuum-time=7d
+# Deleted archived journal ... (8.0M) x4
+# Vacuuming done, freed 32.0M of archived journals
 ```
 
-We get a 502. What do the holy nginx logs say?
+Is that enough? No sir!
 
 ```bash
-cat /var/log/nginx/error.log
-# connect() to unix:/run/gunicorn.socket failed (2: No such file or directory)
+/home/admin/kihei
+# panic: exit status 1
+# goroutine 1 [running]: main.main() ./main.go:64 +0x47d
 ```
 
-So nginx is trying to reach a socket that doesn't exist. BUT, looking at Gunicorn's status, it was stopped:
+Still failing, despite about 500M freed in total:
 
 ```bash
-sudo systemctl status gunicorn
-# Active: inactive (dead)
-sudo systemctl start gunicorn
-sudo systemctl status gunicorn
-# Active: active (running)
+df -h
+# /dev/nvme0n1p1   7.7G  6.4G  878M  89% /
 ```
 
-Still a 502 though. I lean toward the phantom socket theory, but looking closer:
+We can still look at `/usr/lib`:
 
 ```bash
-ls -la /run/gunicorn.socket
-# ls: cannot access '/run/gunicorn.socket': No such file or directory
-ll /run/gunicorn.sock
-# srw-rw-rw- 1 root root 0 Mar 12 18:17 /run/gunicorn.sock
+du -h --max-depth=1 /usr | sort -h
+# 454M  /usr/lib
+# 1.3G  /usr
 ```
 
-The real socket is actually named `gunicorn.sock` (without the final "**et**"), not `gunicorn.socket`. This typo is visible in the nginx config:
+But after cleaning what could be cleaned, still not enough space.
 
-```nginx
-server {
-    listen 80;
-    location / {
-        include proxy_params;
-        proxy_pass http://unix:/run/gunicorn.socket;  # --> à corriger en "gunicorn.sock"
-    }
-}
-```
-
-We fix it, then restart the services involved. And there:
+Looking at `kihei`'s options:
 
 ```bash
-curl -I http://localhost
-# HTTP/1.1 200 OK
-# Content-Length: 0
+./kihei -h
+# -v  Verbose mode (print extra info)
+./kihei -v
+# Creating file /home/admin/data/newdatafile with size 1.5GB...
+# panic: exit status 1
 ```
 
-The headers go through, but Content-Length is 0, so nothing in the response.
+The program tries to create a **1.5 GB** file. With 878M of free space at most, even a perfect cleanup of the root disk isn't enough. If nothing else can be removed, we create a dedicated volume, and therefore an LVM.
 
-In **wsgi.py** itself, the file hardcodes `Content-Length: 0` while it actually returns `b'Hello, world!'`, hence the mismatch between the announced header and the real body. I still asked an AI to review the code, which gives in the end:
-
-```python
-def application(environ, start_response):
-    status = '200 OK'
-    output = b'Hello, world!'
-    headers = [('Content-Type', 'text/html'), ('Content-Length', str(len(output)))]
-    start_response(status, headers)
-    return [output]
-```
-
-One of the changes it made sets `Content-Length` to be computed dynamically from the returned content. We hit it locally:
+Checking the available disks:
 
 ```bash
-curl http://localhost
-# Hello, world!
+sudo lsblk
+NAME         SIZE TYPE MOUNTPOINT
+nvme0n1        8G disk
+├─nvme0n1p1  7.9G part /
+└─nvme0n1p15 124M part /boot/efi
+nvme1n1        1G disk
+nvme2n1        1G disk
 ```
 
-### <mark style="color:$warning;">Lisbon</mark>
+Two extra 1G disks, unused. Two good candidates for LVM volumes. (guide used: [link](https://blog.stephane-robert.info/docs/admin-serveurs/linux/lvm/)).
 
-**Context:** an etcd server with, apparently, an SSL certificate problem.
+**1. Converting to Physical Volumes:**
 
 ```bash
-ps faux | grep etcd
-# /usr/bin/etcd --cert-file /etc/ssl/certs/localhost.crt --key-file /etc/ssl/certs/localhost.key --advertise-client-urls=https://localhost:2379 --listen-client-urls=https://localhost:2379
+sudo pvcreate /dev/nvme1n1 /dev/nvme2n1
+# Physical volume "/dev/nvme1n1" successfully created.
+# Physical volume "/dev/nvme2n1" successfully created.
 ```
 
-I started from the idea that the SSL certificate needed renewing based on the system date. I went through several tutorials, all nginx / Let's Encrypt / certbot oriented, but nothing worked.
-
-Setting the system date back to an earlier one (January 1, 2023), the certificate error did disappear... but another one appeared instead:
+**2. Creating the Volume Group (merging the two disks):**
 
 ```bash
-sudo date -s 01/03/2023
-etcdctl get foo
-# Error: client: response is invalid json. The endpoint is probably not valid etcd cluster endpoint.
+sudo vgcreate ChiMai /dev/sdb /dev/sdc
+# Volume group "ChiMai" successfully created
+sudo vgdisplay
+# VG Size  1.99 GiB
 ```
 
-So the certificate wasn't the root cause, just a symptom tied to the date, not the root cause.
+The two 1G disks are now combined into a single ~2G group.
 
-We test the etcd endpoints directly over HTTPS:
+**3. Creating the Logical Volume:**
 
 ```bash
-curl https://localhost:2379/v2/keys/foo
-# 404 Not Found (nginx)
-curl https://localhost:2379/v2/
-# 404 Not Found (nginx)
-curl https://localhost:2379/
-# Testing SSL
+sudo lvcreate -L 1G -n ChiMaiData ChiMai
+# Logical volume "ChiMaiData" created.
 ```
 
-Still stuck on "Testing SSL...". Checking the nginx config: nothing wrong on the surface (listening on 443, syntactically valid config):
+**4. Formatting as ext4:**
 
 ```bash
-sudo nginx -t
-# syntax ok, test successful
+sudo mkfs.ext4 /dev/ChiMai/ChiMaiData
 ```
 
-On to the iptables rules, the NAT table in particular:
+**5. Mounting:**
 
 ```bash
-sudo iptables -t nat -L
+sudo mkdir -p /chimaidata
+sudo mount /dev/ChiMai/ChiMaiData /chimaidata/
+df -h
+# /dev/mapper/ChiMai-ChiMaiData  2.0G   24K  1.9G   1% /chimaidata
 ```
 
-```
-Chain OUTPUT (policy ACCEPT)
-target     prot opt source               destination
-REDIRECT   tcp  --  anywhere             anywhere             tcp dpt:2379 redir ports 443
-```
-
-Found it: **all** TCP traffic destined for port 2379 (etcd) is forwarded to port 443 by iptables. That rule was causing the nginx 404s instead of etcd responses.&#x20;
-
-We remove the redirect rules from the OUTPUT chain of the NAT table:
+The new volume is mounted with 1.9G free. However, I got my first instinct wrong: wanting to move `datafile` directly. But the file is 5 GB, far more than the available volume:
 
 ```bash
-sudo iptables -t nat -F OUTPUT
+sudo mv /home/admin/datafile .
+# mv: error writing './datafile': No space left on device
 ```
 
-Then check for anything new:
+So rather than moving the existing data, we make the folder the program writes to (`/home/admin/data`) point to the new volume via a symlink.
 
 ```bash
-curl https://localhost:2379/v2/keys/foo
-# {"action":"get","node":{"key":"/foo","value":"bar","modifiedIndex":4,"createdIndex":4}}
+sudo chown -R admin:admin chimaidata/
+rm -rf /home/admin/data
+ln -s /chimaidata /home/admin/data
+```
+
+We check:
+
+```bash
+ll /home/admin/
+# -rw-r--r-- 1 root  root  5.0G Dec 14 04:29 datafile
+# lrwxrwxrwx 1 admin admin   11 Mar 18 18:42 data -> /chimaidata
+```
+
+`datafile` stays intact where it is; only the destination folder `data` now points to the new LVM volume.
+
+Result:
+
+```bash
+/home/admin/kihei -v
+# Creating file /home/admin/data/newdatafile with size 1.5GB...
+# Done.
 ```
 
 Solved.
